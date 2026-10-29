@@ -20,9 +20,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IReimbursementService, ReimbursementService>();
 
+// Orígenes de navegador permitidos (Angular y Flutter web). Flutter nativo no usa CORS.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
-    options.AddPolicy("AngularLocal", policy =>
-        policy.WithOrigins("http://localhost:4200")
+    options.AddPolicy("LocalFrontends", policy =>
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()));
 
@@ -41,7 +43,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseCors("AngularLocal");
+app.UseCors("LocalFrontends");
 app.MapControllers();
 
 app.Run();
