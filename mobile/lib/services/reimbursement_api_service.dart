@@ -16,18 +16,34 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// La API respondió 401: el token expiró o ya no es válido; hay que volver al login.
+class SessionExpiredException extends ApiException {
+  const SessionExpiredException()
+      : super('Tu sesión expiró. Inicia sesión de nuevo para continuar.');
+}
+
 class ReimbursementApiService {
-  ReimbursementApiService({http.Client? client}) : _client = client ?? http.Client();
+  ReimbursementApiService({http.Client? client, required String? Function() token})
+      : _client = client ?? http.Client(),
+        _currentToken = token;
 
   final http.Client _client;
+  final String? Function() _currentToken;
 
   static const _invalidResponse = 'El servidor envió una respuesta inesperada.';
 
-  Future<List<Reimbursement>> getMyReimbursements(String employeeName) async {
-    final uri = Uri.parse(ApiConfig.baseUrl)
-        .replace(queryParameters: {'employeeName': employeeName});
+  Map<String, String> get _headers {
+    final token = _currentToken();
+    return {
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
-    final body = await _send(() => _client.get(uri, headers: {'Accept': 'application/json'}));
+  /// La API identifica al empleado por su token y devuelve solo sus solicitudes.
+  Future<List<Reimbursement>> getMyReimbursements() async {
+    final body = await _send(
+        () => _client.get(Uri.parse(ApiConfig.reimbursementsUrl), headers: _headers));
     if (body is! List) throw const ApiException(_invalidResponse);
 
     return _parse(() => body
@@ -36,24 +52,19 @@ class ReimbursementApiService {
   }
 
   Future<Reimbursement> createReimbursement({
-    required String employeeName,
     required int amount,
     required String category,
     required String description,
   }) async {
     final payload = jsonEncode({
-      'employeeName': employeeName,
       'amount': amount,
       'category': category,
       'description': description,
     });
 
     final body = await _send(() => _client.post(
-          Uri.parse(ApiConfig.baseUrl),
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-            'Accept': 'application/json',
-          },
+          Uri.parse(ApiConfig.reimbursementsUrl),
+          headers: {..._headers, 'Content-Type': 'application/json; charset=utf-8'},
           body: payload,
         ));
     if (body is! Map<String, dynamic>) throw const ApiException(_invalidResponse);
@@ -75,6 +86,7 @@ class ReimbursementApiService {
 
     final body = _tryDecode(response);
     if (response.statusCode >= 200 && response.statusCode < 300) return body;
+    if (response.statusCode == 401) throw const SessionExpiredException();
 
     // La API responde los errores como {"message": "..."}.
     final message = body is Map && body['message'] is String

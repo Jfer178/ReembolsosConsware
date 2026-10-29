@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/api_config.dart';
+import '../models/session.dart';
 import '../theme/app_theme.dart';
 
 /// Logo de Consware (símbolo vectorial + nombre), dibujado para verse nítido en cualquier tamaño.
@@ -176,50 +176,121 @@ class _MountainPainter extends CustomPainter {
 
 /// Iniciales del empleado en un círculo con degradado.
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key});
+  const ProfileAvatar({super.key, required this.initials, this.size = 46});
 
-  String get _initials => ApiConfig.employeeName
-      .split(' ')
-      .where((part) => part.isNotEmpty)
-      .take(2)
-      .map((part) => part[0].toUpperCase())
-      .join();
+  final String initials;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: ApiConfig.employeeName,
-      child: Container(
-        width: 46,
-        height: 46,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: AppColors.primaryGradient,
-          border: Border.all(color: Colors.white, width: 3),
-          boxShadow: AppShadows.card,
-        ),
-        child: Text(
-          _initials,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15),
-        ),
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppColors.primaryGradient,
+        border: Border.all(color: Colors.white, width: size / 15),
+        boxShadow: AppShadows.card,
+      ),
+      child: Text(
+        initials,
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: size / 3),
       ),
     );
   }
 }
 
-/// Cabecera de las pestañas: logo a la izquierda y avatar a la derecha.
+/// Cabecera de las pestañas: logo a la izquierda y el perfil del empleado a la derecha.
 class BrandHeader extends StatelessWidget {
-  const BrandHeader({super.key});
+  const BrandHeader({super.key, required this.session, required this.onLogout});
+
+  final Session session;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        ConswareLogo(height: 30),
-        Spacer(),
-        ProfileAvatar(),
+        const ConswareLogo(height: 30),
+        const Spacer(),
+        Tooltip(
+          message: 'Mi perfil',
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () => _showProfile(context),
+            child: ProfileAvatar(initials: session.initials),
+          ),
+        ),
       ],
+    );
+  }
+
+  void _showProfile(BuildContext context) {
+    final expires = session.expiresAtUtc.toLocal();
+    final now = DateTime.now();
+    final sameDay = expires.year == now.year && expires.month == now.month && expires.day == now.day;
+    final time = '${sameDay ? 'hoy' : 'mañana'} a las '
+        '${expires.hour.toString().padLeft(2, '0')}:${expires.minute.toString().padLeft(2, '0')}';
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Colors.white,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ProfileAvatar(initials: session.initials, size: 72),
+              const SizedBox(height: 12),
+              Text(session.fullName, style: AppText.sectionTitle.copyWith(fontSize: 19)),
+              const SizedBox(height: 2),
+              Text('${session.department} · Empleado', style: AppText.subtitle),
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified_user_rounded, color: AppColors.approved),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Sesión segura activa como ${session.username}.\nVence $time.',
+                        style: const TextStyle(fontSize: 13, color: AppColors.text, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    onLogout();
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Cerrar sesión'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.rejected,
+                    side: const BorderSide(color: AppColors.rejectedBg, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    textStyle: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

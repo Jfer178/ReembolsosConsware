@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/reimbursement.dart';
+import '../models/session.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animations.dart';
 import '../widgets/brand.dart';
 import '../widgets/reimbursement_card.dart';
 import '../widgets/state_views.dart';
@@ -21,12 +23,16 @@ enum _SortOrder {
 class MyReimbursementsScreen extends StatefulWidget {
   const MyReimbursementsScreen({
     super.key,
+    required this.session,
+    required this.onLogout,
     required this.items,
     required this.loading,
     required this.error,
     required this.onRefresh,
   });
 
+  final Session session;
+  final VoidCallback onLogout;
   final List<Reimbursement> items;
   final bool loading;
   final String? error;
@@ -71,7 +77,7 @@ class _MyReimbursementsScreenState extends State<MyReimbursementsScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 130),
         children: [
-          const BrandHeader(),
+          BrandHeader(session: widget.session, onLogout: widget.onLogout),
           const SizedBox(height: 28),
           const Text('Mis solicitudes', style: AppText.pageTitle),
           const SizedBox(height: 6),
@@ -128,7 +134,17 @@ class _MyReimbursementsScreenState extends State<MyReimbursementsScreen> {
           if (widget.error != null)
             ErrorView(message: widget.error!, onRetry: widget.onRefresh)
           else if (widget.loading && widget.items.isEmpty)
-            const LoadingView()
+            const Shimmer(
+              child: Column(
+                children: [
+                  ReimbursementCardSkeleton(),
+                  SizedBox(height: 14),
+                  ReimbursementCardSkeleton(),
+                  SizedBox(height: 14),
+                  ReimbursementCardSkeleton(),
+                ],
+              ),
+            )
           else if (visible.isEmpty)
             EmptyView(
               message: widget.items.isEmpty
@@ -136,10 +152,15 @@ class _MyReimbursementsScreenState extends State<MyReimbursementsScreen> {
                   : 'No hay solicitudes que coincidan con la búsqueda.',
             )
           else
-            for (final item in visible)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: ReimbursementCard(item: item),
+            for (final (index, item) in visible.indexed)
+              FadeSlideIn(
+                // La clave reinicia la animación al cambiar de filtro u orden.
+                key: ValueKey('${_filter?.name}-${_sort.name}-${item.id}'),
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: ReimbursementCard(item: item),
+                ),
               ),
         ],
       ),

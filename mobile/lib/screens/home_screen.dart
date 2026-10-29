@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../config/api_config.dart';
 import '../models/reimbursement.dart';
+import '../models/session.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/animations.dart';
 import '../widgets/brand.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/reimbursement_card.dart';
@@ -13,6 +14,8 @@ import '../widgets/status_badge.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
+    required this.session,
+    required this.onLogout,
     required this.items,
     required this.loading,
     required this.error,
@@ -21,6 +24,8 @@ class HomeScreen extends StatelessWidget {
     required this.onSeeAll,
   });
 
+  final Session session;
+  final VoidCallback onLogout;
   final List<Reimbursement> items;
   final bool loading;
   final String? error;
@@ -35,29 +40,78 @@ class HomeScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 130),
         children: [
-          const BrandHeader(),
+          BrandHeader(session: session, onLogout: onLogout),
           const SizedBox(height: 28),
-          const Text('¡Hola, ${ApiConfig.employeeName}!', style: AppText.pageTitle),
+          FadeSlideIn(child: Text('¡Hola, ${session.firstName}!', style: AppText.pageTitle)),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.only(right: 70),
-            child: Text(
-              'Gestiona aquí tus gastos de trabajo y solicita el reembolso de forma rápida y sencilla.',
-              style: AppText.subtitle,
+          const FadeSlideIn(
+            index: 1,
+            child: Padding(
+              padding: EdgeInsets.only(right: 70),
+              child: Text(
+                'Gestiona aquí tus gastos de trabajo y solicita el reembolso de forma rápida y sencilla.',
+                style: AppText.subtitle,
+              ),
             ),
           ),
           const SizedBox(height: 24),
           if (error != null)
             ErrorView(message: error!, onRetry: onRefresh)
           else if (loading && items.isEmpty)
-            const LoadingView()
+            const _HomeSkeleton()
           else ...[
-            _SummaryCard(items: items),
+            FadeSlideIn(index: 2, child: _SummaryCard(items: items)),
             const SizedBox(height: 18),
-            PrimaryButton(label: 'Registrar gasto', icon: Icons.add_rounded, onPressed: onCreate),
+            FadeSlideIn(
+              index: 3,
+              child: PrimaryButton(label: 'Registrar gasto', icon: Icons.add_rounded, onPressed: onCreate),
+            ),
             const SizedBox(height: 18),
-            _RecentActivity(items: items, onSeeAll: onSeeAll),
+            FadeSlideIn(index: 4, child: _RecentActivity(items: items, onSeeAll: onSeeAll)),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Esqueleto con la forma del resumen y la actividad mientras llega la primera respuesta.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: cardDecoration(radius: 24),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 200, height: 16),
+                SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: SkeletonBox(height: 104, radius: 18)),
+                    SizedBox(width: 10),
+                    Expanded(child: SkeletonBox(height: 104, radius: 18)),
+                    SizedBox(width: 10),
+                    Expanded(child: SkeletonBox(height: 104, radius: 18)),
+                  ],
+                ),
+                SizedBox(height: 14),
+                SkeletonBox(height: 82, radius: 18),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          const SkeletonBox(height: 58, radius: 18),
+          const SizedBox(height: 18),
+          const ReimbursementCardSkeleton(),
+          const SizedBox(height: 10),
+          const ReimbursementCardSkeleton(),
         ],
       ),
     );
@@ -120,21 +174,26 @@ class _SummaryCard extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text.rich(
-                          TextSpan(
-                            text: formatCopNumber(approvedTotal),
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.navy,
-                            ),
-                            children: const [
-                              TextSpan(
-                                text: ' COP',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            AnimatedCount(
+                              value: approvedTotal,
+                              // Durante la animación cuenta en pesos enteros; al llegar muestra el valor exacto.
+                              format: (v) => formatCopNumber(
+                                  (v - approvedTotal).abs() < 0.5 ? approvedTotal : v.roundToDouble()),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.navy,
                               ),
-                            ],
-                          ),
+                            ),
+                            const Text(
+                              ' COP',
+                              style: TextStyle(fontSize: 16, color: AppColors.navy),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -168,8 +227,9 @@ class _StatTile extends StatelessWidget {
         children: [
           StatusDot(status, size: 30),
           const SizedBox(height: 10),
-          Text(
-            '$count',
+          AnimatedCount(
+            value: count.toDouble(),
+            format: (v) => v.round().toString(),
             style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.navy, height: 1.1),
           ),
           Text(
@@ -216,10 +276,13 @@ class _RecentActivity extends StatelessWidget {
           if (items.isEmpty)
             const EmptyView(message: 'Aún no tienes solicitudes.\nRegistra tu primer gasto.')
           else
-            for (final item in items.take(3))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ReimbursementCard(item: item, compact: true),
+            for (final (index, item) in items.take(3).indexed)
+              FadeSlideIn(
+                index: index + 4,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ReimbursementCard(item: item, compact: true),
+                ),
               ),
         ],
       ),

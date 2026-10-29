@@ -27,6 +27,7 @@ class Reimbursement {
     required this.rejectionReason,
     required this.createdAtUtc,
     required this.decidedAtUtc,
+    this.decidedBy,
   });
 
   final int id;
@@ -38,6 +39,9 @@ class Reimbursement {
   final String? rejectionReason;
   final DateTime createdAtUtc;
   final DateTime? decidedAtUtc;
+
+  /// Quién decidió: nombre del aprobador o "Sistema" en la aprobación automática.
+  final String? decidedBy;
 
   factory Reimbursement.fromJson(Map<String, dynamic> json) => Reimbursement(
         id: json['id'] as int,
@@ -51,6 +55,7 @@ class Reimbursement {
         decidedAtUtc: json['decidedAtUtc'] == null
             ? null
             : DateTime.parse(json['decidedAtUtc'] as String),
+        decidedBy: json['decidedBy'] as String?,
       );
 
   /// Código legible para el usuario, p. ej. RB-2026-0007.

@@ -58,6 +58,11 @@ class _DetailContent extends StatelessWidget {
         _DetailRow(label: 'Creada el', value: formatDateTime(item.createdAtUtc)),
         if (item.decidedAtUtc != null)
           _DetailRow(label: decidedLabel, value: formatDateTime(item.decidedAtUtc!)),
+        if (item.decidedBy != null)
+          _DetailRow(
+            label: 'Decidida por',
+            value: item.decidedBy == 'Sistema' ? 'Aprobación automática' : item.decidedBy!,
+          ),
         const SizedBox(height: 12),
         const Text('Descripción', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy)),
         const SizedBox(height: 4),

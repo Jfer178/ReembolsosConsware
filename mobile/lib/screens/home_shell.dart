@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../config/api_config.dart';
 import '../models/reimbursement.dart';
+import '../models/session.dart';
 import '../services/reimbursement_api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animations.dart';
 import '../widgets/brand.dart';
 import 'create_reimbursement_screen.dart';
 import 'home_screen.dart';
@@ -11,9 +12,18 @@ import 'my_reimbursements_screen.dart';
 
 /// Carga las solicitudes del empleado una sola vez y las comparte con las pestañas.
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, required this.service});
+  const HomeShell({
+    super.key,
+    required this.service,
+    required this.session,
+    required this.onLogout,
+    required this.onSessionExpired,
+  });
 
   final ReimbursementApiService service;
+  final Session session;
+  final VoidCallback onLogout;
+  final VoidCallback onSessionExpired;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -37,12 +47,14 @@ class _HomeShellState extends State<HomeShell> {
       _error = null;
     });
     try {
-      final items = await widget.service.getMyReimbursements(ApiConfig.employeeName);
+      final items = await widget.service.getMyReimbursements();
       if (!mounted) return;
       setState(() {
         _items = items;
         _loading = false;
       });
+    } on SessionExpiredException {
+      if (mounted) widget.onSessionExpired();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -54,15 +66,11 @@ class _HomeShellState extends State<HomeShell> {
 
   Future<void> _openCreate() async {
     final created = await Navigator.of(context).push<Reimbursement>(
-      MaterialPageRoute(builder: (_) => CreateReimbursementScreen(service: widget.service)),
+      FadeSlideRoute(builder: (_) => CreateReimbursementScreen(service: widget.service)),
     );
     if (created == null || !mounted) return;
 
-    final message = created.status == ReimbursementStatus.approved
-        ? 'Solicitud ${created.code} aprobada automáticamente.'
-        : 'Solicitud ${created.code} enviada. Queda pendiente de aprobación.';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-
+    // El formulario ya mostró la animación de éxito; aquí solo se lleva al listado actualizado.
     setState(() => _tab = 1);
     await _load();
   }
@@ -78,6 +86,8 @@ class _HomeShellState extends State<HomeShell> {
             index: _tab,
             children: [
               HomeScreen(
+                session: widget.session,
+                onLogout: widget.onLogout,
                 items: _items,
                 loading: _loading,
                 error: _error,
@@ -86,6 +96,8 @@ class _HomeShellState extends State<HomeShell> {
                 onSeeAll: () => setState(() => _tab = 1),
               ),
               MyReimbursementsScreen(
+                session: widget.session,
+                onLogout: widget.onLogout,
                 items: _items,
                 loading: _loading,
                 error: _error,

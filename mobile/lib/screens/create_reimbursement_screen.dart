@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../config/api_config.dart';
 import '../models/reimbursement.dart';
 import '../services/reimbursement_api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/categories.dart';
 import '../utils/formatters.dart';
+import '../widgets/animations.dart';
 import '../widgets/brand.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/state_views.dart';
@@ -46,10 +46,15 @@ class _CreateReimbursementScreenState extends State<CreateReimbursementScreen> {
     setState(() => _submitting = true);
     try {
       final created = await widget.service.createReimbursement(
-        employeeName: ApiConfig.employeeName,
         amount: _amount!,
         category: _category!,
         description: _descriptionController.text.trim(),
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _SuccessDialog(item: created),
       );
       if (!mounted) return;
       Navigator.of(context).pop(created);
@@ -191,6 +196,63 @@ class _CreateReimbursementScreenState extends State<CreateReimbursementScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Confirmación animada después de enviar: check que se dibuja y el resultado de la regla.
+class _SuccessDialog extends StatelessWidget {
+  const _SuccessDialog({required this.item});
+
+  final Reimbursement item;
+
+  @override
+  Widget build(BuildContext context) {
+    final approved = item.status == ReimbursementStatus.approved;
+    return Dialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SuccessCheck(color: approved ? AppColors.approved : AppColors.primary),
+            const SizedBox(height: 22),
+            FadeSlideIn(
+              index: 2,
+              child: Text(
+                approved ? '¡Aprobada automáticamente!' : '¡Solicitud enviada!',
+                textAlign: TextAlign.center,
+                style: AppText.sectionTitle.copyWith(fontSize: 20),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeSlideIn(
+              index: 3,
+              child: Text(
+                approved
+                    ? '${item.code} por ${formatCop(item.amount)} quedó aprobada al estar dentro del límite.'
+                    : '${item.code} por ${formatCop(item.amount)} quedó pendiente de revisión del Equipo de Finanzas.',
+                textAlign: TextAlign.center,
+                style: AppText.subtitle,
+              ),
+            ),
+            const SizedBox(height: 24),
+            FadeSlideIn(
+              index: 4,
+              child: SizedBox(
+                width: double.infinity,
+                child: PrimaryButton(
+                  label: 'Ver mis solicitudes',
+                  icon: Icons.receipt_long_rounded,
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
