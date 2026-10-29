@@ -25,34 +25,36 @@ class PrimaryButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: AppShadows.button,
         ),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             // Deshabilitado mientras carga para impedir el doble envío.
             onTap: enabled ? onPressed : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+            child: SizedBox(
+              height: 58,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (loading)
-                    const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                    )
-                  else
-                    Icon(icon, color: Colors.white),
-                  const SizedBox(width: 10),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: loading
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                          )
+                        : Icon(icon, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
                   Text(
                     loading ? 'Enviando...' : label,
                     style: const TextStyle(

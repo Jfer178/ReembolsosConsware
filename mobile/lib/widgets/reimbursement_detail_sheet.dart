@@ -41,7 +41,7 @@ class _DetailContent extends StatelessWidget {
             Expanded(
               child: Text(
                 item.category,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.text),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.navy),
               ),
             ),
             StatusBadge(item.status),
@@ -50,7 +50,7 @@ class _DetailContent extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           formatCop(item.amount),
-          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.text),
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.navy),
         ),
         const SizedBox(height: 16),
         _DetailRow(label: 'Código', value: item.code),
@@ -59,7 +59,7 @@ class _DetailContent extends StatelessWidget {
         if (item.decidedAtUtc != null)
           _DetailRow(label: decidedLabel, value: formatDateTime(item.decidedAtUtc!)),
         const SizedBox(height: 12),
-        const Text('Descripción', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.text)),
+        const Text('Descripción', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy)),
         const SizedBox(height: 4),
         Text(item.description, style: const TextStyle(color: AppColors.text)),
         if (item.status == ReimbursementStatus.rejected && item.rejectionReason != null) ...[

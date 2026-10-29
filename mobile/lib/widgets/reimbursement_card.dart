@@ -8,87 +8,109 @@ import 'reimbursement_detail_sheet.dart';
 import 'status_badge.dart';
 
 class ReimbursementCard extends StatelessWidget {
-  const ReimbursementCard({super.key, required this.item});
+  const ReimbursementCard({super.key, required this.item, this.compact = false});
 
   final Reimbursement item;
+
+  /// Versión para "Actividad reciente": borde fino en vez de sombra y sin código ni motivo.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final showManualReview =
         item.status == ReimbursementStatus.pending && item.exceedsAutoApprovalLimit;
+    final showReason = !compact &&
+        item.status == ReimbursementStatus.rejected &&
+        item.rejectionReason != null;
+    final radius = BorderRadius.circular(compact ? 16 : 20);
 
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => showReimbursementDetail(context, item),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CategoryAvatar(category: item.category),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return DecoratedBox(
+      decoration: compact
+          ? BoxDecoration(
+              color: Colors.white,
+              borderRadius: radius,
+              border: Border.all(color: AppColors.border),
+            )
+          : cardDecoration(),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => showReimbursementDetail(context, item),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(12, compact ? 12 : 14, 6, compact ? 12 : 14),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    CategoryAvatar(category: item.category),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${item.category} - ${item.description}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.navy,
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          if (!compact)
+                            Text(
+                              item.code,
+                              style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+                            ),
+                          Text(
+                            formatDate(item.createdAtUtc),
+                            style: const TextStyle(fontSize: 11.5, color: AppColors.muted),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '${item.category} - ${item.description}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.text),
+                          formatCop(item.amount),
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.navy,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${item.code} · ${formatDate(item.createdAtUtc)}',
-                          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                        ),
+                        const SizedBox(height: 6),
+                        StatusBadge(item.status),
+                        if (showManualReview && !compact) ...[
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Requiere aprobación manual',
+                            style: TextStyle(fontSize: 10.5, color: AppColors.pending),
+                          ),
+                        ],
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formatCop(item.amount),
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.text),
-                      ),
-                      const SizedBox(height: 6),
-                      StatusBadge(item.status),
-                    ],
+                    Icon(
+                      showReason ? Icons.keyboard_arrow_down_rounded : Icons.chevron_right_rounded,
+                      color: AppColors.muted,
+                    ),
+                  ],
+                ),
+                if (showReason) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: RejectionReasonBox(reason: item.rejectionReason!),
                   ),
                 ],
-              ),
-              if (item.status == ReimbursementStatus.rejected && item.rejectionReason != null) ...[
-                const SizedBox(height: 12),
-                RejectionReasonBox(reason: item.rejectionReason!),
               ],
-              if (showManualReview) ...[
-                const SizedBox(height: 8),
-                const Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.pending),
-                      SizedBox(width: 4),
-                      Text(
-                        'Requiere aprobación manual',
-                        style: TextStyle(fontSize: 11, color: AppColors.pending),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -97,20 +119,21 @@ class ReimbursementCard extends StatelessWidget {
 }
 
 class CategoryAvatar extends StatelessWidget {
-  const CategoryAvatar({super.key, required this.category});
+  const CategoryAvatar({super.key, required this.category, this.size = 50});
 
   final String category;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 44,
-      height: 44,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.tile,
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(iconForCategory(category), color: AppColors.text),
+      child: Icon(iconForCategory(category), color: AppColors.navy, size: size * 0.5),
     );
   }
 }
@@ -124,26 +147,30 @@ class RejectionReasonBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.rejectedBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.cancel, color: AppColors.rejected, size: 18),
-          const SizedBox(width: 8),
+          const StatusDot(ReimbursementStatus.rejected, size: 28),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Motivo del rechazo',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.rejected),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.rejected,
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text(reason, style: const TextStyle(fontSize: 12, color: AppColors.text)),
+                Text(reason, style: const TextStyle(fontSize: 13, color: AppColors.text, height: 1.4)),
               ],
             ),
           ),

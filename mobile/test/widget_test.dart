@@ -4,6 +4,7 @@ import 'package:consware_reembolsos/main.dart';
 import 'package:consware_reembolsos/models/reimbursement.dart';
 import 'package:consware_reembolsos/services/reimbursement_api_service.dart';
 import 'package:consware_reembolsos/utils/formatters.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -105,7 +106,7 @@ void main() {
     );
     await tester.pumpWidget(ConswareApp(service: service));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Mis solicitudes').last);
+    await tester.tap(find.byKey(const Key('nav-requests')));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Taxi a reunión'), findsWidgets);

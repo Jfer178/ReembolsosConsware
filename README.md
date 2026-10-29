@@ -48,7 +48,8 @@ Los orígenes de navegador permitidos por CORS se configuran en `appsettings.jso
 
 Requisitos: Flutter 3.44+ y la API encendida. El empleado se identifica con el nombre fijo `Empleado Demo` (sin login, como permite el enunciado).
 
-Pantallas: inicio con resumen por estado, registrar gasto (monto, categoría, descripción) y mis solicitudes (búsqueda, filtros por estado, motivo de rechazo y detalle).
+Pantallas: inicio con resumen por estado, registrar gasto (monto, categoría, descripción) y mis solicitudes (búsqueda, filtros por estado, orden, motivo de rechazo y detalle).
+Diseño con la identidad de Consware (logo vectorial, azul marino) y la tipografía Poppins incluida en `assets/fonts` (licencia OFL).
 
 ```powershell
 cd mobile
@@ -82,3 +83,4 @@ App Flutter:
 
 - `flutter analyze` sin problemas y `flutter test` con 8 de 8 pruebas correctas.
 - Flutter web (release, puerto 4300) cargando las solicitudes reales de la API; el preflight CORS para POST desde `localhost:4300` es aceptado.
+- Emulador Android (Pixel 7, Android 15) contra la API en `10.0.2.2:5080`: se registró desde el formulario un gasto de $650.000 (Tiquetes), quedó `Pending` en SQL Server y la lista se actualizó con el aviso de aprobación manual.

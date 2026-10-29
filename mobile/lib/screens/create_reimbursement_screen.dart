@@ -6,6 +6,7 @@ import '../services/reimbursement_api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/categories.dart';
 import '../utils/formatters.dart';
+import '../widgets/brand.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/state_views.dart';
 
@@ -64,98 +65,157 @@ class _CreateReimbursementScreenState extends State<CreateReimbursementScreen> {
   @override
   Widget build(BuildContext context) {
     final amount = _amount ?? 0;
+    final categoryIcon = _category == null ? Icons.category_outlined : iconForCategory(_category!);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar gasto')),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-            children: [
-              if (_showPolicyBanner)
-                _PolicyBanner(onClose: () => setState(() => _showPolicyBanner = false)),
-              const _FieldLabel('Monto'),
-              TextFormField(
-                controller: _amountController,
-                enabled: !_submitting,
-                keyboardType: TextInputType.number,
-                inputFormatters: [CopAmountInputFormatter()],
-                decoration: const InputDecoration(
-                  hintText: '0',
-                  prefixText: '\$ ',
-                  suffixText: 'COP',
+      body: AppBackground(
+        child: SafeArea(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              children: [
+                Row(
+                  children: [
+                    _BackButton(onPressed: () => Navigator.of(context).maybePop()),
+                    const Expanded(child: Center(child: ConswareLogo(height: 26))),
+                    const SizedBox(width: 44),
+                  ],
                 ),
-                validator: (_) {
-                  final value = _amount;
-                  if (value == null) return 'Ingresa el monto del gasto.';
-                  if (value <= 0) return 'El monto debe ser mayor a cero.';
-                  return null;
-                },
-                onChanged: (_) => setState(() {}),
-              ),
-              if (amount > Reimbursement.autoApprovalLimit)
-                const _AmountHint(
-                  icon: Icons.warning_amber_rounded,
-                  color: AppColors.pending,
-                  text: 'Supera \$500.000 COP: quedará pendiente de aprobación manual.',
-                )
-              else if (amount > 0)
-                const _AmountHint(
-                  icon: Icons.check_circle_outline,
-                  color: AppColors.approved,
-                  text: 'Hasta \$500.000 COP: se aprueba automáticamente.',
-                ),
-              const _FieldLabel('Categoría'),
-              DropdownButtonFormField<String>(
-                initialValue: _category,
-                hint: const Text('Selecciona una categoría'),
-                borderRadius: BorderRadius.circular(14),
-                dropdownColor: Colors.white,
-                items: [
-                  for (final category in expenseCategories)
-                    DropdownMenuItem(
-                      value: category.name,
-                      child: Row(
-                        children: [
-                          Icon(category.icon, size: 20, color: AppColors.muted),
-                          const SizedBox(width: 12),
-                          Text(category.name),
-                        ],
+                const SizedBox(height: 22),
+                const Text('Registrar gasto', style: AppText.pageTitle),
+                const SizedBox(height: 16),
+                if (_showPolicyBanner)
+                  _PolicyBanner(onClose: () => setState(() => _showPolicyBanner = false)),
+                const _FieldLabel('Monto'),
+                TextFormField(
+                  controller: _amountController,
+                  enabled: !_submitting,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CopAmountInputFormatter()],
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.navy),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    prefixIcon: Container(
+                      width: 56,
+                      margin: const EdgeInsets.only(right: 12),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        border: Border(right: BorderSide(color: AppColors.border)),
+                      ),
+                      child: const Text(
+                        '\$',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.navy),
                       ),
                     ),
-                ],
-                onChanged: _submitting ? null : (value) => setState(() => _category = value),
-                validator: (value) => value == null ? 'Selecciona una categoría.' : null,
-              ),
-              const _FieldLabel('Descripción'),
-              TextFormField(
-                controller: _descriptionController,
-                enabled: !_submitting,
-                minLines: 3,
-                maxLines: 5,
-                maxLength: 500,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Ej.: Taxi al cliente para la reunión de presentación del proyecto.',
+                    suffixText: 'COP',
+                    suffixStyle: const TextStyle(color: AppColors.muted, fontSize: 14),
+                  ),
+                  validator: (_) {
+                    final value = _amount;
+                    if (value == null) return 'Ingresa el monto del gasto.';
+                    if (value <= 0) return 'El monto debe ser mayor a cero.';
+                    return null;
+                  },
+                  onChanged: (_) => setState(() {}),
                 ),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Describe el gasto.' : null,
-              ),
-              if (_submitError != null) ...[
-                const SizedBox(height: 8),
-                ErrorBanner(message: _submitError!),
+                if (amount > Reimbursement.autoApprovalLimit)
+                  const _AmountHint(
+                    icon: Icons.schedule_rounded,
+                    color: AppColors.pending,
+                    text: 'Supera \$500.000 COP: quedará pendiente de aprobación manual.',
+                  )
+                else if (amount > 0)
+                  const _AmountHint(
+                    icon: Icons.check_circle_rounded,
+                    color: AppColors.approved,
+                    text: 'Hasta \$500.000 COP: se aprueba automáticamente.',
+                  ),
+                const _FieldLabel('Categoría'),
+                DropdownButtonFormField<String>(
+                  initialValue: _category,
+                  hint: const Text('Selecciona una categoría', style: TextStyle(fontSize: 14)),
+                  borderRadius: BorderRadius.circular(16),
+                  dropdownColor: Colors.white,
+                  icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.navy),
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 15, color: AppColors.text),
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(categoryIcon, color: AppColors.navy),
+                  ),
+                  selectedItemBuilder: (_) => [
+                    for (final category in expenseCategories) Text(category.name),
+                  ],
+                  items: [
+                    for (final category in expenseCategories)
+                      DropdownMenuItem(
+                        value: category.name,
+                        child: Row(
+                          children: [
+                            Icon(category.icon, size: 20, color: AppColors.navy),
+                            const SizedBox(width: 12),
+                            Text(category.name),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: _submitting ? null : (value) => setState(() => _category = value),
+                  validator: (value) => value == null ? 'Selecciona una categoría.' : null,
+                ),
+                const _FieldLabel('Descripción'),
+                TextFormField(
+                  controller: _descriptionController,
+                  enabled: !_submitting,
+                  minLines: 3,
+                  maxLines: 5,
+                  maxLength: 500,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: const TextStyle(fontSize: 14.5, height: 1.45),
+                  decoration: const InputDecoration(
+                    hintText: 'Ej.: Traslado al cliente para la reunión de presentación del proyecto.',
+                    hintMaxLines: 2,
+                  ),
+                  validator: (value) =>
+                      value == null || value.trim().isEmpty ? 'Describe el gasto.' : null,
+                ),
+                if (_submitError != null) ...[
+                  const SizedBox(height: 8),
+                  ErrorBanner(message: _submitError!),
+                ],
+                const SizedBox(height: 20),
+                PrimaryButton(
+                  label: 'Enviar solicitud',
+                  icon: Icons.send_rounded,
+                  loading: _submitting,
+                  onPressed: _submit,
+                ),
               ],
-              const SizedBox(height: 20),
-              PrimaryButton(
-                label: 'Enviar solicitud',
-                icon: Icons.send_rounded,
-                loading: _submitting,
-                onPressed: _submit,
-              ),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  const _BackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: AppShadows.card,
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        tooltip: 'Volver',
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.navy),
       ),
     );
   }
@@ -169,26 +229,31 @@ class _PolicyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 4, 14),
       decoration: BoxDecoration(
-        color: AppColors.pendingBg,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(colors: [Color(0xFFFFF7EC), Color(0xFFFFEEDD)]),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFDDB8)),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info, color: AppColors.pending),
-          const SizedBox(width: 10),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(color: Color(0xFFFF9A1F), shape: BoxShape.circle),
+            child: const Icon(Icons.priority_high_rounded, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Las solicitudes con un monto superior a \$500.000 COP requieren aprobación manual del equipo de finanzas.',
-              style: TextStyle(fontSize: 13, color: AppColors.text, height: 1.35),
+              style: TextStyle(fontSize: 12.5, color: AppColors.text, height: 1.45),
             ),
           ),
           IconButton(
             onPressed: onClose,
             tooltip: 'Cerrar',
-            icon: const Icon(Icons.close, size: 18, color: AppColors.muted),
+            icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.muted),
           ),
         ],
       ),
@@ -204,11 +269,11 @@ class _FieldLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      padding: const EdgeInsets.only(top: 20, bottom: 8, left: 2),
       child: Text.rich(
         TextSpan(
           text: text,
-          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.text),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.navy),
           children: const [
             TextSpan(text: ' *', style: TextStyle(color: AppColors.rejected)),
           ],

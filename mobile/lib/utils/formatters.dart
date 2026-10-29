@@ -9,13 +9,16 @@ const _months = [
 String groupThousands(String digits) =>
     digits.replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
 
-/// 85000 -> "$ 85.000 COP"; 500000.01 -> "$ 500.000,01 COP"
-String formatCop(num amount) {
+/// 85000 -> "$ 85.000"; 500000.01 -> "$ 500.000,01"
+String formatCopNumber(num amount) {
   final whole = amount.truncate();
   final cents = ((amount - whole) * 100).round();
   final decimals = cents == 0 ? '' : ',${cents.toString().padLeft(2, '0')}';
-  return '\$ ${groupThousands(whole.toString())}$decimals COP';
+  return '\$ ${groupThousands(whole.toString())}$decimals';
 }
+
+/// 85000 -> "$ 85.000 COP"
+String formatCop(num amount) => '${formatCopNumber(amount)} COP';
 
 /// Fecha en hora local: "14 ene. 2026"
 String formatDate(DateTime utc) {
