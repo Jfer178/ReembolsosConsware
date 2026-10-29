@@ -1,0 +1,72 @@
+@baseUrl = http://localhost:5080/api/reimbursements
+
+### T02 - Crear con monto exacto en el límite (esperado: 201, Approved)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "employeeName": "Empleado Demo",
+  "amount": 500000,
+  "category": "Alimentación",
+  "description": "Almuerzo con un cliente"
+}
+
+### T03 - Crear por encima del límite (esperado: 201, Pending)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "employeeName": "Empleado Demo",
+  "amount": 500001,
+  "category": "Transporte",
+  "description": "Taxi a reunión de trabajo"
+}
+
+### T04 - Monto cero (esperado: 400)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "employeeName": "Empleado Demo",
+  "amount": 0,
+  "category": "Transporte",
+  "description": "Taxi"
+}
+
+### T06 - Descripción solo con espacios (esperado: 400)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "employeeName": "Empleado Demo",
+  "amount": 1000,
+  "category": "Transporte",
+  "description": "   "
+}
+
+### Listar todas
+GET {{baseUrl}}
+
+### T09 - Filtrar pendientes
+GET {{baseUrl}}?status=Pending
+
+### T11 - Filtros combinados
+GET {{baseUrl}}?status=Pending&employeeName=Empleado%20Demo
+
+### T08 - ID inexistente (esperado: 404)
+GET {{baseUrl}}/999999
+
+### T12 - Aprobar pendiente (cambiar el id)
+PATCH {{baseUrl}}/2/approve
+
+### T13 - Rechazar pendiente con motivo (cambiar el id)
+PATCH {{baseUrl}}/2/reject
+Content-Type: application/json
+
+{ "reason": "No cumple la política de gastos." }
+
+### T14 - Rechazar con motivo vacío (esperado: 400)
+PATCH {{baseUrl}}/2/reject
+Content-Type: application/json
+
+{ "reason": " " }
