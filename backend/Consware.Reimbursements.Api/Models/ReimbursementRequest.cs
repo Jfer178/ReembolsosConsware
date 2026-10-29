@@ -11,4 +11,7 @@ public class ReimbursementRequest
     public string? RejectionReason { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? DecidedAtUtc { get; set; }
+
+    /// <summary>Nombre de quien aprobó o rechazó; "Sistema" en la aprobación automática.</summary>
+    public string? DecidedBy { get; set; }
 }

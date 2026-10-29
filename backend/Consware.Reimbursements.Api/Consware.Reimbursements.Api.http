@@ -1,11 +1,33 @@
-@baseUrl = http://localhost:5080/api/reimbursements
+@api = http://localhost:5080/api
+@baseUrl = {{api}}/reimbursements
 
-### T02 - Crear con monto exacto en el límite (esperado: 201, Approved)
+# Usuarios de demostración (solo en Development): ver README.
+# 1) Ejecuta los dos logins y copia cada "token" en las variables de abajo.
+@employeeToken = pegar-token-del-empleado
+@approverToken = pegar-token-del-aprobador
+
+### Login empleado
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "username": "empleado.demo", "password": "Empleado2026!" }
+
+### Login aprobador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{ "username": "andres.ramirez", "password": "Finanzas2026!" }
+
+### Usuario de la sesión
+GET {{api}}/auth/me
+Authorization: Bearer {{employeeToken}}
+
+### T02 - Crear con monto exacto en el límite (esperado: 201, Approved). El empleado sale del token.
 POST {{baseUrl}}
+Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
 {
-  "employeeName": "Empleado Demo",
   "amount": 500000,
   "category": "Alimentación",
   "description": "Almuerzo con un cliente"
@@ -13,10 +35,10 @@ Content-Type: application/json
 
 ### T03 - Crear por encima del límite (esperado: 201, Pending)
 POST {{baseUrl}}
+Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
 {
-  "employeeName": "Empleado Demo",
   "amount": 500001,
   "category": "Transporte",
   "description": "Taxi a reunión de trabajo"
@@ -24,49 +46,37 @@ Content-Type: application/json
 
 ### T04 - Monto cero (esperado: 400)
 POST {{baseUrl}}
+Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
-{
-  "employeeName": "Empleado Demo",
-  "amount": 0,
-  "category": "Transporte",
-  "description": "Taxi"
-}
+{ "amount": 0, "category": "Transporte", "description": "Taxi" }
 
-### T06 - Descripción solo con espacios (esperado: 400)
-POST {{baseUrl}}
-Content-Type: application/json
-
-{
-  "employeeName": "Empleado Demo",
-  "amount": 1000,
-  "category": "Transporte",
-  "description": "   "
-}
-
-### Listar todas
+### Mis solicitudes (el empleado solo ve las suyas)
 GET {{baseUrl}}
+Authorization: Bearer {{employeeToken}}
 
-### T09 - Filtrar pendientes
+### T09 - Pendientes (aprobador)
 GET {{baseUrl}}?status=Pending
-
-### T11 - Filtros combinados
-GET {{baseUrl}}?status=Pending&employeeName=Empleado%20Demo
+Authorization: Bearer {{approverToken}}
 
 ### T08 - ID inexistente (esperado: 404)
 GET {{baseUrl}}/999999
+Authorization: Bearer {{approverToken}}
 
 ### T12 - Aprobar pendiente (cambiar el id)
 PATCH {{baseUrl}}/2/approve
+Authorization: Bearer {{approverToken}}
 
 ### T13 - Rechazar pendiente con motivo (cambiar el id)
 PATCH {{baseUrl}}/2/reject
+Authorization: Bearer {{approverToken}}
 Content-Type: application/json
 
 { "reason": "No cumple la política de gastos." }
 
-### T14 - Rechazar con motivo vacío (esperado: 400)
-PATCH {{baseUrl}}/2/reject
-Content-Type: application/json
+### Sin token (esperado: 401)
+GET {{baseUrl}}
 
-{ "reason": " " }
+### Empleado intenta aprobar (esperado: 403)
+PATCH {{baseUrl}}/2/approve
+Authorization: Bearer {{employeeToken}}

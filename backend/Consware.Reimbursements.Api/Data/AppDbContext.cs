@@ -9,9 +9,20 @@ public class AppDbContext : DbContext
         : base(options) { }
 
     public DbSet<ReimbursementRequest> ReimbursementRequests => Set<ReimbursementRequest>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var user = modelBuilder.Entity<User>();
+        user.ToTable("Users");
+        user.HasKey(x => x.Id);
+        user.Property(x => x.Username).IsRequired().HasMaxLength(50).IsUnicode(false);
+        user.Property(x => x.FullName).IsRequired().HasMaxLength(100);
+        user.Property(x => x.Department).IsRequired().HasMaxLength(60);
+        user.Property(x => x.PasswordHash).IsRequired().HasMaxLength(100).IsUnicode(false);
+        user.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsUnicode(false);
+        user.HasIndex(x => x.Username).IsUnique();
+
         var entity = modelBuilder.Entity<ReimbursementRequest>();
 
         // Las restricciones CHECK son una defensa adicional; las reglas se validan en el servicio.
@@ -30,6 +41,7 @@ public class AppDbContext : DbContext
         entity.Property(x => x.Category).IsRequired().HasMaxLength(60);
         entity.Property(x => x.Description).IsRequired().HasMaxLength(500);
         entity.Property(x => x.RejectionReason).HasMaxLength(500);
+        entity.Property(x => x.DecidedBy).HasMaxLength(100);
         entity.Property(x => x.Status)
               .HasConversion<string>()
               .HasMaxLength(16)

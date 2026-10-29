@@ -9,4 +9,5 @@ public record ReimbursementResponseDto(
     string Status,
     string? RejectionReason,
     DateTime CreatedAtUtc,
-    DateTime? DecidedAtUtc);
+    DateTime? DecidedAtUtc,
+    string? DecidedBy);

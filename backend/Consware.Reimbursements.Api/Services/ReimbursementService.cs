@@ -9,14 +9,15 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
 {
     // Montos menores o iguales a este valor (COP) se aprueban automáticamente.
     public const decimal AutoApprovalLimit = 500_000m;
+    public const string SystemDecider = "Sistema";
 
     private const int EmployeeNameMaxLength = 100;
     private const int CategoryMaxLength = 60;
     private const int TextMaxLength = 500;
 
-    public async Task<ReimbursementResponseDto> CreateAsync(CreateReimbursementDto dto)
+    public async Task<ReimbursementResponseDto> CreateAsync(CreateReimbursementDto dto, string employeeName)
     {
-        var employeeName = RequireText(dto.EmployeeName, "nombre del empleado", EmployeeNameMaxLength);
+        employeeName = RequireText(employeeName, "nombre del empleado", EmployeeNameMaxLength);
         var category = RequireText(dto.Category, "categoría", CategoryMaxLength);
         var description = RequireText(dto.Description, "descripción", TextMaxLength);
 
@@ -36,7 +37,8 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
             Description = description,
             Status = status,
             CreatedAtUtc = now,
-            DecidedAtUtc = status == ReimbursementStatus.Approved ? now : null
+            DecidedAtUtc = status == ReimbursementStatus.Approved ? now : null,
+            DecidedBy = status == ReimbursementStatus.Approved ? SystemDecider : null
         };
 
         db.ReimbursementRequests.Add(entity);
@@ -74,18 +76,19 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
         return entity is null ? null : ToDto(entity);
     }
 
-    public async Task<ReimbursementResponseDto> ApproveAsync(int id)
+    public async Task<ReimbursementResponseDto> ApproveAsync(int id, string decidedBy)
     {
         var entity = await FindPendingAsync(id);
 
         entity.Status = ReimbursementStatus.Approved;
         entity.DecidedAtUtc = DateTime.UtcNow;
+        entity.DecidedBy = decidedBy;
 
         await db.SaveChangesAsync();
         return ToDto(entity);
     }
 
-    public async Task<ReimbursementResponseDto> RejectAsync(int id, string? reason)
+    public async Task<ReimbursementResponseDto> RejectAsync(int id, string? reason, string decidedBy)
     {
         var cleanReason = RequireText(reason, "motivo de rechazo", TextMaxLength);
         var entity = await FindPendingAsync(id);
@@ -93,6 +96,7 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
         entity.Status = ReimbursementStatus.Rejected;
         entity.RejectionReason = cleanReason;
         entity.DecidedAtUtc = DateTime.UtcNow;
+        entity.DecidedBy = decidedBy;
 
         await db.SaveChangesAsync();
         return ToDto(entity);
@@ -105,11 +109,18 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
             ?? throw new ReimbursementNotFoundException(id);
 
         if (entity.Status != ReimbursementStatus.Pending)
+        {
+            var state = entity.Status == ReimbursementStatus.Approved ? "aprobada" : "rechazada";
+            var by = string.IsNullOrEmpty(entity.DecidedBy) ? "" : $" por {entity.DecidedBy}";
             throw new InvalidStatusTransitionException(
-                $"La solicitud {id} ya fue decidida (estado actual: {entity.Status}) y no puede cambiar.");
+                $"La solicitud {Code(entity)} ya fue {state}{by} y no puede cambiar.");
+        }
 
         return entity;
     }
+
+    // Mismo código que muestran la app y el panel: RB-2026-0007.
+    private static string Code(ReimbursementRequest x) => $"RB-{x.CreatedAtUtc.Year}-{x.Id:D4}";
 
     private static string RequireText(string? value, string fieldName, int maxLength)
     {
@@ -147,5 +158,6 @@ public class ReimbursementService(AppDbContext db) : IReimbursementService
         x.Status.ToString(),
         x.RejectionReason,
         DateTime.SpecifyKind(x.CreatedAtUtc, DateTimeKind.Utc),
-        x.DecidedAtUtc is null ? null : DateTime.SpecifyKind(x.DecidedAtUtc.Value, DateTimeKind.Utc));
+        x.DecidedAtUtc is null ? null : DateTime.SpecifyKind(x.DecidedAtUtc.Value, DateTimeKind.Utc),
+        x.DecidedBy);
 }
