@@ -1,5 +1,5 @@
 <div class="page">
-  <header class="topbar">
+  <app-topbar>
     <label class="search">
       <span class="material-symbols-rounded">search</span>
       <input
@@ -10,20 +10,23 @@
         (input)="onSearch($event)"
       />
     </label>
-
-    <div class="user">
-      <span class="user-avatar">AP</span>
-      <div class="user-text">
-        <strong>Aprobador</strong>
-        <span>Equipo de finanzas</span>
-      </div>
-    </div>
-  </header>
+  </app-topbar>
 
   <section class="hero">
     <div class="hero-text">
+      <span class="page-eyebrow">
+        <span class="material-symbols-rounded filled">groups</span>
+        Equipo de Finanzas
+      </span>
       <h1>Panel de aprobación</h1>
-      <p>Revisa y gestiona las solicitudes de reembolso de tu equipo.</p>
+      <p>
+        @if (counts().Pending > 0) {
+          Tienes <strong>{{ counts().Pending }} {{ counts().Pending === 1 ? 'solicitud' : 'solicitudes' }}</strong> por revisar
+          por <strong>{{ formatCop(pendingTotal()) }}</strong>.
+        } @else {
+          No tienes solicitudes por revisar. ¡Todo al día!
+        }
+      </p>
     </div>
 
     <svg class="mountains" viewBox="0 0 300 230" aria-hidden="true">
@@ -60,38 +63,38 @@
   </section>
 
   <section class="stats">
-    <article class="stat" data-kind="pending">
+    <button type="button" class="stat" data-kind="pending" (click)="selectTab('Pending')">
       <span class="stat-icon material-symbols-rounded">schedule</span>
       <div>
         <h3>Pendientes</h3>
         <strong>{{ counts().Pending }}</strong>
         <small>Por revisar</small>
       </div>
-    </article>
-    <article class="stat" data-kind="approved">
+    </button>
+    <button type="button" class="stat" data-kind="approved" (click)="selectTab('Approved')">
       <span class="stat-icon material-symbols-rounded">check</span>
       <div>
         <h3>Aprobadas</h3>
         <strong>{{ counts().Approved }}</strong>
         <small>En total</small>
       </div>
-    </article>
-    <article class="stat" data-kind="rejected">
+    </button>
+    <button type="button" class="stat" data-kind="rejected" (click)="selectTab('Rejected')">
       <span class="stat-icon material-symbols-rounded">close</span>
       <div>
         <h3>Rechazadas</h3>
         <strong>{{ counts().Rejected }}</strong>
         <small>En total</small>
       </div>
-    </article>
-    <article class="stat" data-kind="amount">
+    </button>
+    <div class="stat" data-kind="amount">
       <span class="stat-icon material-symbols-rounded filled">savings</span>
       <div>
         <h3>Monto total aprobado</h3>
         <strong>{{ formatCopNumber(approvedTotal()) }} <span class="currency">COP</span></strong>
         <small>Solicitudes aprobadas</small>
       </div>
-    </article>
+    </div>
   </section>
 
   <section class="board">
@@ -110,221 +113,315 @@
         }
       </div>
 
-      <button type="button" class="refresh" (click)="load()" [disabled]="loading()">
-        <span class="material-symbols-rounded" [class.spin]="loading()">refresh</span>
-        Actualizar
-      </button>
+      <div class="toolbar-right">
+        <span class="live" [class.offline]="store.error()" aria-live="polite">
+          <span class="live-dot"></span>
+          {{ liveLabel() }}
+        </span>
+
+        <button
+          type="button"
+          class="icon-button"
+          title="Actualizar ahora"
+          aria-label="Actualizar ahora"
+          (click)="store.refresh(true)"
+        >
+          <span class="material-symbols-rounded" [class.spin]="store.refreshing()">refresh</span>
+        </button>
+
+        <div class="filters-wrap">
+          <button
+            type="button"
+            class="filters-button"
+            [class.active]="activeFilters() > 0"
+            [attr.aria-expanded]="filtersOpen()"
+            (click)="filtersOpen.set(!filtersOpen())"
+          >
+            <span class="material-symbols-rounded">filter_alt</span>
+            Filtros
+            @if (activeFilters() > 0) {
+              <span class="filters-count">{{ activeFilters() }}</span>
+            }
+            <span class="material-symbols-rounded">keyboard_arrow_down</span>
+          </button>
+
+          @if (filtersOpen()) {
+            <div class="click-catcher" (click)="filtersOpen.set(false)"></div>
+            <div class="filters-panel">
+              <label>
+                <span>Categoría</span>
+                <select [value]="category()" (change)="setCategory($event)">
+                  <option value="">Todas las categorías</option>
+                  @for (c of categories(); track c) {
+                    <option [value]="c" [selected]="c === category()">{{ c }}</option>
+                  }
+                </select>
+              </label>
+
+              <div class="field">
+                <span>Monto</span>
+                <div class="segmented">
+                  @for (r of amountRanges; track r.value) {
+                    <button
+                      type="button"
+                      [class.active]="amountRange() === r.value"
+                      (click)="setAmountRange(r.value)"
+                    >
+                      {{ r.label }}
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <label>
+                <span>Ordenar por</span>
+                <select (change)="setSort($event)">
+                  @for (s of sortOrders; track s.value) {
+                    <option [value]="s.value" [selected]="s.value === sort()">{{ s.label }}</option>
+                  }
+                </select>
+              </label>
+
+              <div class="filters-actions">
+                <button type="button" class="link" (click)="clearFilters()" [disabled]="activeFilters() === 0">
+                  Limpiar filtros
+                </button>
+                <button type="button" class="btn-primary small" (click)="filtersOpen.set(false)">Aplicar</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
     </div>
 
-    @if (error(); as message) {
+    @if (selectedItems().length > 0) {
+      <div class="bulk-bar">
+        <span class="material-symbols-rounded filled">check_box</span>
+        <strong>{{ selectedItems().length }} {{ selectedItems().length === 1 ? 'seleccionada' : 'seleccionadas' }}</strong>
+        <span class="bulk-total">Total {{ formatCop(selectedTotal()) }}</span>
+        <span class="spacer"></span>
+        <button type="button" class="link light" (click)="clearSelection()">Limpiar</button>
+        <button type="button" class="btn-success small" (click)="askApprove(selectedItems())">
+          <span class="material-symbols-rounded">done_all</span>
+          Aprobar seleccionadas
+        </button>
+      </div>
+    }
+
+    @if (store.error() && store.items().length === 0) {
       <div class="error-state">
         <span class="material-symbols-rounded">cloud_off</span>
         <h3>No se pudo cargar la información</h3>
-        <p>{{ message }}</p>
-        <button type="button" class="btn-primary" (click)="load()">
+        <p>{{ store.error() }}</p>
+        <button type="button" class="btn-primary" (click)="store.refresh(true)">
           <span class="material-symbols-rounded">refresh</span>
           Reintentar
         </button>
       </div>
     } @else {
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th># Solicitud</th>
-              <th>Empleado</th>
-              <th>Categoría</th>
-              <th>Monto</th>
-              <th>Fecha de creación</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (loading() && rows().length === 0) {
-              @for (row of skeletonRows; track row) {
-                <tr class="skeleton"><td colspan="7"><div></div></td></tr>
-              }
-            } @else {
-              @for (item of visibleRows(); track item.id) {
-                <tr>
-                  <td class="code">{{ code(item) }}</td>
-                  <td>
-                    <div class="employee">
-                      <span class="avatar" [style.background]="avatarColor(item.employeeName)">
-                        {{ initials(item.employeeName) }}
-                      </span>
-                      <div>
-                        <strong>{{ item.employeeName }}</strong>
-                        <small [title]="item.description">{{ item.description }}</small>
+      <div class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="check-col">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar las pendientes de esta página"
+                    [checked]="allPageSelected()"
+                    [disabled]="selectablePageRows().length === 0"
+                    (change)="toggleAllOnPage()"
+                  />
+                </th>
+                <th># Solicitud</th>
+                <th>Empleado</th>
+                <th>Categoría</th>
+                <th>Monto</th>
+                <th>Fecha de creación</th>
+                <th>Estado</th>
+                <th class="actions-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (store.loading()) {
+                @for (row of skeletonRows; track row) {
+                  <tr class="skeleton"><td colspan="8"><div></div></td></tr>
+                }
+              } @else {
+                @for (item of pageRows(); track item.id) {
+                  <tr
+                    class="row"
+                    tabindex="0"
+                    [class.is-new]="store.newIds().has(item.id)"
+                    [class.is-selected]="selection().has(item.id)"
+                    [attr.aria-label]="'Ver detalle de ' + code(item)"
+                    (click)="openDetail(item)"
+                    (keydown.enter)="openDetail(item)"
+                  >
+                    <td class="check-col" (click)="$event.stopPropagation()">
+                      @if (item.status === 'Pending') {
+                        <input
+                          type="checkbox"
+                          [attr.aria-label]="'Seleccionar ' + code(item)"
+                          [checked]="selection().has(item.id)"
+                          (change)="toggleSelected(item)"
+                        />
+                      }
+                    </td>
+                    <td class="code">
+                      {{ code(item) }}
+                      @if (store.newIds().has(item.id)) {
+                        <span class="chip-new">Nueva</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="employee">
+                        <span class="avatar" [style.background]="avatarColor(item.employeeName)">
+                          {{ initials(item.employeeName) }}
+                        </span>
+                        <div>
+                          <strong>{{ item.employeeName }}</strong>
+                          <small [title]="item.description">{{ item.description }}</small>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span class="category">
-                      <span class="material-symbols-rounded">{{ categoryIcon(item.category) }}</span>
-                      {{ item.category }}
-                    </span>
-                  </td>
-                  <td>
-                    <strong class="amount">{{ formatCop(item.amount) }}</strong>
-                    @if (item.status === 'Pending' && item.amount > limit) {
-                      <span class="manual" title="Supera el límite de aprobación automática">
-                        <span class="material-symbols-rounded filled">warning</span>
-                        Revisión manual (&gt; $500.000)
+                    </td>
+                    <td>
+                      <span class="category">
+                        <span class="material-symbols-rounded">{{ categoryIcon(item.category) }}</span>
+                        {{ item.category }}
                       </span>
-                    }
-                  </td>
-                  <td class="date">{{ formatDate(item.createdAtUtc) }}</td>
-                  <td>
-                    <span class="badge" [attr.data-status]="item.status">
-                      <span class="material-symbols-rounded filled">{{ labels[item.status].icon }}</span>
-                      {{ labels[item.status].singular }}
-                    </span>
-                    @if (item.rejectionReason) {
-                      <small class="reason" [title]="item.rejectionReason">{{ item.rejectionReason }}</small>
-                    }
-                  </td>
-                  <td class="actions">
-                    @if (item.status === 'Pending') {
-                      <button type="button" class="btn-approve" (click)="approving.set(item)">
-                        <span class="material-symbols-rounded">check</span>
-                        Aprobar
-                      </button>
-                      <button type="button" class="btn-reject" (click)="openReject(item)">
-                        <span class="material-symbols-rounded">close</span>
-                        Rechazar
-                      </button>
-                    } @else if (item.decidedAtUtc) {
-                      <span class="decided">Decidida el {{ formatDate(item.decidedAtUtc) }}</span>
-                    }
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="7">
-                    <div class="empty">
-                      <span class="material-symbols-rounded">task_alt</span>
-                      <strong>{{ emptyState().title }}</strong>
-                      <span>{{ emptyState().text }}</span>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td>
+                      <strong class="amount">{{ formatCop(item.amount) }}</strong>
+                      @if (item.status === 'Pending' && item.amount > limit) {
+                        <span class="manual" title="Supera el límite de aprobación automática">
+                          <span class="material-symbols-rounded filled">warning</span>
+                          Revisión manual (&gt; $500.000)
+                        </span>
+                      }
+                    </td>
+                    <td class="date">
+                      {{ formatDate(item.createdAtUtc) }}
+                      <small>{{ timeAgo(item.createdAtUtc, store.now()) }}</small>
+                    </td>
+                    <td>
+                      <span class="badge" [attr.data-status]="item.status">
+                        <span class="material-symbols-rounded filled">{{ labels[item.status].icon }}</span>
+                        {{ labels[item.status].singular }}
+                      </span>
+                    </td>
+                    <td class="actions" (click)="$event.stopPropagation()">
+                      @if (item.status === 'Pending') {
+                        <button type="button" class="btn-approve" (click)="askApprove([item])">
+                          <span class="material-symbols-rounded">check</span>
+                          Aprobar
+                        </button>
+                        <button type="button" class="btn-reject" (click)="openDetail(item, true)">
+                          <span class="material-symbols-rounded">close</span>
+                          Rechazar
+                        </button>
+                      } @else {
+                        <button type="button" class="btn-view" (click)="openDetail(item)">
+                          Ver detalle
+                          <span class="material-symbols-rounded">chevron_right</span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="8">
+                      <div class="empty">
+                        <span class="material-symbols-rounded">task_alt</span>
+                        <strong>{{ emptyState().title }}</strong>
+                        <span>{{ emptyState().text }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                }
               }
-            }
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
+
+        @if (!store.loading() && filtered().length > 0) {
+          <footer class="table-footer">
+            <span>{{ rangeLabel() }}</span>
+            <nav class="pager" aria-label="Paginación">
+              <button
+                type="button"
+                aria-label="Página anterior"
+                [disabled]="currentPage() === 1"
+                (click)="page.set(currentPage() - 1)"
+              >
+                <span class="material-symbols-rounded">chevron_left</span>
+              </button>
+              @for (n of pageNumbers(); track n) {
+                <button type="button" [class.active]="n === currentPage()" (click)="page.set(n)">{{ n }}</button>
+              }
+              <button
+                type="button"
+                aria-label="Página siguiente"
+                [disabled]="currentPage() === pageCount()"
+                (click)="page.set(currentPage() + 1)"
+              >
+                <span class="material-symbols-rounded">chevron_right</span>
+              </button>
+            </nav>
+          </footer>
+        }
       </div>
     }
   </section>
 </div>
 
-@if (approving(); as item) {
-  <div class="backdrop" (click)="closeDialogs()"></div>
+@if (detailItem(); as item) {
+  <app-request-detail
+    [item]="item"
+    [isNew]="store.newIds().has(item.id)"
+    [now]="store.now()"
+    [submitting]="submitting()"
+    [startInReject]="startInReject()"
+    [rejectError]="rejectError()"
+    (closed)="closeDetail()"
+    (approve)="askApprove([item])"
+    (reject)="rejectItem(item, $event)"
+  />
+}
+
+@if (confirming(); as items) {
+  <div class="backdrop confirm-backdrop" (click)="submitting() || confirming.set(null)"></div>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="approve-title">
     <span class="modal-icon material-symbols-rounded filled">check_circle</span>
-    <h2 id="approve-title">¿Aprobar esta solicitud?</h2>
-    <p>
-      {{ code(item) }} · {{ item.employeeName }}<br />
-      <strong>{{ formatCop(item.amount) }}</strong> · {{ item.category }}
-    </p>
-    <p class="hint">Una vez aprobada, su estado ya no podrá cambiar.</p>
+    @if (items.length === 1) {
+      <h2 id="approve-title">¿Aprobar esta solicitud?</h2>
+      <p>
+        {{ code(items[0]) }} · {{ items[0].employeeName }}<br />
+        <strong>{{ formatCop(items[0].amount) }}</strong> · {{ items[0].category }}
+      </p>
+    } @else {
+      <h2 id="approve-title">¿Aprobar {{ items.length }} solicitudes?</h2>
+      <ul class="modal-list">
+        @for (i of items; track i.id) {
+          <li><span>{{ code(i) }} · {{ i.employeeName }}</span><strong>{{ formatCop(i.amount) }}</strong></li>
+        }
+      </ul>
+    }
+    <p class="hint">Una vez aprobadas, su estado ya no podrá cambiar.</p>
     <div class="modal-actions">
-      <button type="button" class="btn-secondary" (click)="closeDialogs()" [disabled]="submitting()">Cancelar</button>
+      <button type="button" class="btn-secondary" (click)="confirming.set(null)" [disabled]="submitting()">Cancelar</button>
       <button type="button" class="btn-success" (click)="confirmApprove()" [disabled]="submitting()">
         <span class="material-symbols-rounded">check</span>
-        {{ submitting() ? 'Aprobando...' : 'Aprobar solicitud' }}
+        {{ submitting() ? 'Aprobando...' : items.length === 1 ? 'Aprobar solicitud' : 'Aprobar todas' }}
       </button>
     </div>
   </div>
 }
 
-@if (rejecting(); as item) {
-  <div class="backdrop" (click)="closeDialogs()"></div>
-  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="reject-title">
-    <header class="drawer-header">
-      <span class="drawer-icon material-symbols-rounded">close</span>
-      <h2 id="reject-title">Rechazar solicitud</h2>
-      <button type="button" class="icon-btn" (click)="closeDialogs()" aria-label="Cerrar">
-        <span class="material-symbols-rounded">close</span>
-      </button>
-    </header>
-
-    <div class="drawer-body">
-      <div class="request-card">
-        <div class="request-head">
-          <span class="avatar" [style.background]="avatarColor(item.employeeName)">{{ initials(item.employeeName) }}</span>
-          <div>
-            <strong>{{ item.employeeName }}</strong>
-            <small>Empleado</small>
-          </div>
-          <span class="request-code">{{ code(item) }}</span>
-        </div>
-        <dl>
-          <div>
-            <dt>Categoría</dt>
-            <dd>
-              <span class="material-symbols-rounded">{{ categoryIcon(item.category) }}</span>
-              {{ item.category }}
-            </dd>
-          </div>
-          <div>
-            <dt>Monto</dt>
-            <dd>{{ formatCop(item.amount) }}</dd>
-          </div>
-          <div>
-            <dt>Fecha de creación</dt>
-            <dd>{{ formatDate(item.createdAtUtc) }}</dd>
-          </div>
-          <div>
-            <dt>Descripción</dt>
-            <dd>{{ item.description }}</dd>
-          </div>
-        </dl>
-        @if (item.amount > limit) {
-          <span class="manual pill">
-            <span class="material-symbols-rounded filled">error</span>
-            Requiere revisión manual (&gt; $500.000)
-          </span>
-        }
-      </div>
-
-      <label class="field-label" for="reason">Motivo del rechazo <span class="required">*</span></label>
-      <textarea
-        id="reason"
-        rows="5"
-        placeholder="Indica el motivo del rechazo..."
-        [attr.maxlength]="maxReasonLength"
-        [value]="reason()"
-        [class.invalid]="reasonError()"
-        [disabled]="submitting()"
-        (input)="onReasonInput($event)"
-      ></textarea>
-      <div class="field-meta">
-        <span class="field-error">{{ reasonError() }}</span>
-        <span>{{ reason().length }}/{{ maxReasonLength }}</span>
-      </div>
-
-      <div class="info">
-        <span class="material-symbols-rounded filled">info</span>
-        <p>El rechazo es definitivo. El empleado verá este motivo en su app de reembolsos.</p>
-      </div>
-    </div>
-
-    <footer class="drawer-footer">
-      <button type="button" class="btn-secondary" (click)="closeDialogs()" [disabled]="submitting()">Cancelar</button>
-      <button type="button" class="btn-danger" (click)="confirmReject()" [disabled]="submitting()">
-        <span class="material-symbols-rounded">send</span>
-        {{ submitting() ? 'Rechazando...' : 'Rechazar solicitud' }}
-      </button>
-    </footer>
-  </aside>
-}
-
 @if (toast(); as t) {
   <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">
     <span class="material-symbols-rounded filled">
-      {{ t.kind === 'success' ? 'check_circle' : t.kind === 'warning' ? 'warning' : 'error' }}
+      {{ t.kind === 'success' ? 'check_circle' : t.kind === 'info' ? 'notifications_active' : t.kind === 'warning' ? 'warning' : 'error' }}
     </span>
     {{ t.text }}
   </div>

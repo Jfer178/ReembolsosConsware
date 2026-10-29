@@ -4,12 +4,19 @@ import { TestBed } from '@angular/core/testing';
 
 import { API_BASE_URL } from './api.config';
 import { ReimbursementService, apiErrorMessage } from './services/reimbursement.service';
-import { formatCop, requestCode } from './shared/format';
+import { formatCop, formatDuration, requestCode, timeAgo } from './shared/format';
 
 describe('format', () => {
   it('formatea montos en COP con separador de miles', () => {
     expect(formatCop(650000)).toBe('$ 650.000 COP');
     expect(formatCop(500000.01)).toBe('$ 500.000,01 COP');
+  });
+
+  it('expresa tiempos relativos y duraciones', () => {
+    const now = Date.parse('2026-10-29T15:10:00Z');
+    expect(timeAgo('2026-10-29T15:09:55Z', now)).toBe('hace 5 s');
+    expect(timeAgo('2026-10-29T15:00:00Z', now)).toBe('hace 10 min');
+    expect(formatDuration(3 * 3_600_000 + 20 * 60_000)).toBe('3 h 20 min');
   });
 
   it('genera el mismo código que la app móvil', () => {

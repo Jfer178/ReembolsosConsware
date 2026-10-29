@@ -109,11 +109,13 @@ npm start        # http://localhost:4210
 
 Funcionalidad:
 
-- Resumen con pendientes, aprobadas, rechazadas y monto total aprobado.
-- Tabla filtrada por estado con `GET /api/reimbursements?status=...` (Pendientes por defecto), búsqueda por empleado, categoría, descripción o código.
-- Aprobar: pide confirmación y llama a `PATCH /{id}/approve`.
-- Rechazar: panel lateral con motivo obligatorio (máx. 500 caracteres); la UI bloquea el motivo vacío y la API también lo valida.
-- Si otra persona ya decidió la solicitud (409), se informa y la tabla se recarga. Si la API está apagada, se muestra el error con "Reintentar".
+- **Panel de aprobación:** resumen por estado y monto aprobado; pestañas por estado (Pendientes por defecto); búsqueda por empleado, categoría, descripción o código; filtros por categoría y rango de monto; orden por fecha o monto; paginación.
+- **En vivo:** la lista se sincroniza sola con la API cada 10 segundos (solo con la pestaña visible). Las solicitudes nuevas se resaltan, llegan a la campana de notificaciones y muestran un aviso; no hace falta pulsar "Actualizar".
+- **Detalle:** al hacer clic en una solicitud se abre un panel con su ficha completa y el historial (creada, enviada a revisión, decisión y tiempo de respuesta). La URL incluye `?solicitud=ID`, así que se puede enlazar.
+- **Aprobar:** desde la tabla o el detalle, con confirmación (`PATCH /{id}/approve`). Selección múltiple para aprobar varias pendientes a la vez.
+- **Rechazar:** desde el detalle, con motivo obligatorio (máx. 500 caracteres); la UI bloquea el motivo vacío y la API también lo valida.
+- **Reportes:** solicitudes y montos totales, porcentaje de aprobación automática, tiempo promedio de revisión manual, distribución por estado, monto por categoría, resumen por empleado y últimas decisiones.
+- **Errores:** si otra persona ya decidió la solicitud (409), se informa y la lista se sincroniza. Si la API se cae, se conservan los últimos datos con el indicador "Sin conexión · reintentando".
 
 La URL de la API está en `src/app/api.config.ts`. Pruebas: `npx ng test --watch=false`.
 
@@ -140,7 +142,10 @@ App Flutter:
 
 Panel Angular (contra la API real y SQL Server):
 
-- `ng build` sin advertencias y `ng test` con 6 de 6 pruebas correctas (servicio HTTP, formato y mensajes de error).
+- `ng build` sin advertencias y `ng test` con 7 de 7 pruebas correctas (servicio HTTP, formatos, tiempos relativos y mensajes de error).
+- Actualización en vivo: con el panel abierto se crearon 4 solicitudes por la API y, sin interacción, aparecieron resaltadas como nuevas, con la campana y el contador lateral en 4 y el aviso de llegada.
+- Detalle: clic en una fila abre la ficha con su historial y la marca como vista; desde ahí se rechazó con motivo.
+- Aprobación múltiple de 2 solicitudes con confirmación; filtros (más de $500.000) y paginación verificados.
 - Rechazo sin motivo bloqueado en la UI (T19); rechazo con motivo guardado en SQL Server con su fecha.
 - Aprobación con confirmación guardada en SQL Server.
 - Conflicto: una solicitud aprobada por fuera muestra el aviso de 409 y la tabla se recarga.
@@ -164,6 +169,7 @@ No se implementó porque el enunciado no lo pide y habría restado tiempo a lo o
 - **Autenticación y roles:** login con JWT o un proveedor de identidad; el aprobador y el empleado saldrían del token en lugar de un nombre fijo.
 - **Comprobantes y fecha del gasto:** columnas nuevas y almacenamiento de archivos (por ejemplo, Blob Storage) con validación de tipo y tamaño.
 - **Concurrencia entre aprobadores:** hoy se evita decidir dos veces validando el estado (409); en producción se añadiría `rowversion` para control optimista.
+- **Tiempo real con push:** el panel consulta la API cada 10 s, suficiente para este volumen; con más aprobadores se usaría SignalR para enviar los cambios desde el servidor.
 - **Notificaciones, auditoría y reportes:** registro de quién decidió cada solicitud y aviso al empleado.
 - **Pruebas automatizadas del backend y CI:** pruebas de integración de la API y un pipeline que ejecute las pruebas de los tres proyectos.
 

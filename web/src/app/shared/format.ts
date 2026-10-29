@@ -30,6 +30,36 @@ export function formatDate(isoUtc: string): string {
   return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** Fecha y hora local: "14 ene. 2026, 09:41" */
+export function formatDateTime(isoUtc: string): string {
+  const date = new Date(isoUtc);
+  const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  return `${formatDate(isoUtc)}, ${time}`;
+}
+
+/** Tiempo relativo: "hace 5 s", "hace 3 min", "hace 2 h", "hace 4 días" */
+export function timeAgo(from: Date | string, now: number = Date.now()): string {
+  const seconds = Math.max(0, Math.round((now - new Date(from).getTime()) / 1000));
+  if (seconds < 60) return `hace ${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
+}
+
+/** Duración legible: "45 s", "12 min", "3 h 20 min", "2 días" */
+export function formatDuration(ms: number): string {
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return `${Math.round(ms / 1000)} s`;
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? 'día' : 'días'}`;
+}
+
 /** Código legible, igual al de la app móvil: RB-2026-0007 */
 export function requestCode(item: Reimbursement): string {
   return `RB-${new Date(item.createdAtUtc).getFullYear()}-${item.id.toString().padStart(4, '0')}`;

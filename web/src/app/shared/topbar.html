@@ -1,0 +1,61 @@
+<header class="topbar">
+  <div class="slot">
+    <ng-content />
+  </div>
+
+  <div class="right">
+    <div class="bell-wrap">
+      <button
+        type="button"
+        class="bell"
+        aria-label="Nuevas solicitudes"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <span class="material-symbols-rounded" [class.filled]="count() > 0">notifications</span>
+        @if (count() > 0) {
+          <span class="bell-count">{{ count() }}</span>
+        }
+      </button>
+
+      @if (menuOpen()) {
+        <div class="click-catcher" (click)="menuOpen.set(false)"></div>
+        <div class="menu" role="menu">
+          <div class="menu-header">
+            <strong>Nuevas solicitudes</strong>
+            @if (count() > 0) {
+              <button type="button" class="link" (click)="store.markAllSeen()">Marcar como vistas</button>
+            }
+          </div>
+
+          @for (item of store.notifications(); track item.id) {
+            <button type="button" class="menu-item" role="menuitem" (click)="open(item)">
+              <span class="menu-icon material-symbols-rounded">receipt_long</span>
+              <span class="menu-text">
+                <strong>{{ code(item) }} · {{ item.employeeName }}</strong>
+                <span>{{ formatCop(item.amount) }} · {{ item.category }}</span>
+              </span>
+              <small>{{ timeAgo(item.createdAtUtc, store.now()) }}</small>
+            </button>
+          } @empty {
+            <div class="menu-empty">
+              <span class="material-symbols-rounded">notifications_off</span>
+              <p>No hay solicitudes nuevas.<br />El panel se actualiza solo cada 10 segundos.</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="team">
+      <span class="team-avatar">
+        <span class="material-symbols-rounded filled">groups</span>
+        <span class="online" aria-hidden="true"></span>
+      </span>
+      <div class="team-text">
+        <strong>Equipo de Finanzas</strong>
+        <span>Aprobador · Consware</span>
+      </div>
+    </div>
+  </div>
+</header>

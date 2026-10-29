@@ -1,0 +1,170 @@
+<div class="page">
+  <app-topbar>
+    <nav class="breadcrumb" aria-label="Ruta">
+      <a routerLink="/">Inicio</a>
+      <span class="material-symbols-rounded">chevron_right</span>
+      <span>Reportes</span>
+    </nav>
+  </app-topbar>
+
+  <section class="hero">
+    <span class="page-eyebrow">
+      <span class="material-symbols-rounded filled">groups</span>
+      Equipo de Finanzas
+    </span>
+    <h1>Reportes</h1>
+    <p>Indicadores calculados en vivo con todas las solicitudes registradas.</p>
+  </section>
+
+  @if (store.loading()) {
+    <div class="loading">Cargando indicadores...</div>
+  } @else if (store.error() && store.items().length === 0) {
+    <div class="card error">
+      <span class="material-symbols-rounded">cloud_off</span>
+      <p>{{ store.error() }}</p>
+      <button type="button" class="btn-primary" (click)="store.refresh(true)">Reintentar</button>
+    </div>
+  } @else {
+    <section class="kpis">
+      <article class="kpi">
+        <span class="kpi-icon material-symbols-rounded filled">receipt_long</span>
+        <div>
+          <h3>Solicitudes registradas</h3>
+          <strong>{{ store.items().length }}</strong>
+          <small>Desde todos los empleados</small>
+        </div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon material-symbols-rounded filled">payments</span>
+        <div>
+          <h3>Monto solicitado</h3>
+          <strong>{{ formatCopNumber(totalRequested()) }} <span>COP</span></strong>
+          <small>Suma de todas las solicitudes</small>
+        </div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon material-symbols-rounded filled">bolt</span>
+        <div>
+          <h3>Aprobación automática</h3>
+          <strong>{{ autoApprovalRate() }}%</strong>
+          <small>Solicitudes de hasta $500.000</small>
+        </div>
+      </article>
+      <article class="kpi">
+        <span class="kpi-icon material-symbols-rounded filled">timer</span>
+        <div>
+          <h3>Tiempo promedio de revisión</h3>
+          @if (averageReviewTime(); as avg) {
+            <strong>{{ avg.label }}</strong>
+            <small>{{ avg.count }} {{ avg.count === 1 ? 'decisión manual' : 'decisiones manuales' }}</small>
+          } @else {
+            <strong>—</strong>
+            <small>Aún no hay decisiones manuales</small>
+          }
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Estado de las solicitudes</h2>
+        <div class="donut-wrap">
+          <div class="donut" [style.background]="donut()">
+            <div class="donut-hole">
+              <strong>{{ store.items().length }}</strong>
+              <span>en total</span>
+            </div>
+          </div>
+          <ul class="legend">
+            @for (s of byStatus(); track s.status) {
+              <li>
+                <span class="swatch" [style.background]="statusColors[s.status]"></span>
+                <span class="legend-label">{{ labels[s.status].plural }}</span>
+                <strong>{{ s.count }}</strong>
+                <span class="legend-percent">{{ s.percent }}%</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Monto por categoría</h2>
+        <ul class="bars">
+          @for (c of byCategory(); track c.category) {
+            <li>
+              <div class="bar-head">
+                <span class="bar-label">
+                  <span class="material-symbols-rounded">{{ categoryIcon(c.category) }}</span>
+                  {{ c.category }}
+                  <small>{{ c.count }} {{ c.count === 1 ? 'solicitud' : 'solicitudes' }}</small>
+                </span>
+                <strong>{{ formatCop(c.amount) }}</strong>
+              </div>
+              <div class="bar"><span [style.width.%]="c.width"></span></div>
+            </li>
+          } @empty {
+            <li class="muted">Aún no hay solicitudes.</li>
+          }
+        </ul>
+      </article>
+
+      <article class="card wide">
+        <h2>Solicitudes por empleado</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Solicitudes</th>
+                <th>Monto total</th>
+                <th>Aprobadas</th>
+                <th>Pendientes</th>
+                <th>Rechazadas</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of byEmployee(); track e.name) {
+                <tr>
+                  <td>
+                    <span class="employee">
+                      <span class="avatar" [style.background]="avatarColor(e.name)">{{ initials(e.name) }}</span>
+                      {{ e.name }}
+                    </span>
+                  </td>
+                  <td>{{ e.count }}</td>
+                  <td class="strong">{{ formatCop(e.total) }}</td>
+                  <td><span class="pill" data-status="Approved">{{ e.Approved }}</span></td>
+                  <td><span class="pill" data-status="Pending">{{ e.Pending }}</span></td>
+                  <td><span class="pill" data-status="Rejected">{{ e.Rejected }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card wide">
+        <h2>Últimas decisiones</h2>
+        <ul class="activity">
+          @for (d of recentDecisions(); track d.id) {
+            <li>
+              <a [routerLink]="['/']" [queryParams]="{ solicitud: d.id }">
+                <span class="activity-icon material-symbols-rounded filled" [attr.data-status]="d.status">
+                  {{ labels[d.status].icon }}
+                </span>
+                <span class="activity-text">
+                  <strong>{{ code(d) }} · {{ labels[d.status].singular }}</strong>
+                  <span>{{ d.employeeName }} · {{ formatCop(d.amount) }}</span>
+                </span>
+                <small>{{ timeAgo(d.decidedAtUtc!, store.now()) }}</small>
+              </a>
+            </li>
+          } @empty {
+            <li class="muted">Aún no hay decisiones.</li>
+          }
+        </ul>
+      </article>
+    </section>
+  }
+</div>

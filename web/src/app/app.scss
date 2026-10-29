@@ -6,7 +6,7 @@
 .sidebar {
   position: sticky;
   top: 0;
-  flex: 0 0 260px;
+  flex: 0 0 272px;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -42,11 +42,44 @@
   }
 }
 
+.nav {
+  display: grid;
+  gap: 6px;
+}
+
+.nav-title {
+  padding: 0 16px 6px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.nav-count {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nav .label {
+  white-space: nowrap;
+}
+
 .nav a {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 13px 16px;
+  gap: 12px;
+  padding: 13px 14px;
   border-radius: 14px;
   color: rgba(255, 255, 255, 0.78);
   font-size: 14.5px;
@@ -131,6 +164,21 @@
     .label {
       display: none;
     }
+  }
+
+  .nav-title {
+    display: none;
+  }
+
+  .nav-count {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: var(--rejected);
+    font-size: 10.5px;
   }
 
   .promo {

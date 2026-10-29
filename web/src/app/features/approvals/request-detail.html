@@ -1,0 +1,151 @@
+<div class="backdrop" (click)="closed.emit()"></div>
+
+<aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+  <header class="drawer-header">
+    @if (mode() === 'reject' && isPending()) {
+      <span class="header-icon reject material-symbols-rounded">close</span>
+      <h2 id="detail-title">Rechazar solicitud</h2>
+    } @else {
+      <span class="header-icon material-symbols-rounded">receipt_long</span>
+      <div class="header-title">
+        <h2 id="detail-title">{{ code(item()) }}</h2>
+        @if (isNew()) {
+          <span class="chip-new">Nueva</span>
+        }
+      </div>
+    }
+    <button type="button" class="icon-btn" (click)="closed.emit()" aria-label="Cerrar">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+  </header>
+
+  <div class="drawer-body">
+    <section class="summary">
+      <div class="person">
+        <span class="avatar" [style.background]="avatarColor(item().employeeName)">{{ initials(item().employeeName) }}</span>
+        <div>
+          <strong>{{ item().employeeName }}</strong>
+          <small>Empleado</small>
+        </div>
+        <span class="badge" [attr.data-status]="item().status">
+          <span class="material-symbols-rounded filled">{{ labels[item().status].icon }}</span>
+          {{ labels[item().status].singular }}
+        </span>
+      </div>
+
+      <div class="amount">
+        <small>Monto solicitado</small>
+        <strong>{{ formatCop(item().amount) }}</strong>
+        @if (item().amount > limit) {
+          <span class="manual pill">
+            <span class="material-symbols-rounded filled">error</span>
+            Requiere revisión manual (&gt; $500.000)
+          </span>
+        }
+      </div>
+
+      <dl>
+        <div>
+          <dt>Categoría</dt>
+          <dd>
+            <span class="material-symbols-rounded">{{ categoryIcon(item().category) }}</span>
+            {{ item().category }}
+          </dd>
+        </div>
+        <div>
+          <dt>Código</dt>
+          <dd>{{ code(item()) }}</dd>
+        </div>
+        <div>
+          <dt>Creada</dt>
+          <dd>{{ formatDateTime(item().createdAtUtc) }}</dd>
+        </div>
+        @if (item().decidedAtUtc; as decided) {
+          <div>
+            <dt>Decidida</dt>
+            <dd>{{ formatDateTime(decided) }}</dd>
+          </div>
+        }
+        <div class="full">
+          <dt>Descripción</dt>
+          <dd>{{ item().description }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    @if (mode() === 'reject' && isPending()) {
+      <section class="reject-form">
+        <label class="field-label" for="reason">Motivo del rechazo <span class="required">*</span></label>
+        <textarea
+          id="reason"
+          rows="5"
+          placeholder="Indica el motivo del rechazo..."
+          [attr.maxlength]="maxReasonLength"
+          [value]="reason()"
+          [class.invalid]="error()"
+          [disabled]="submitting()"
+          (input)="onReasonInput($event)"
+        ></textarea>
+        <div class="field-meta">
+          <span class="field-error">{{ error() }}</span>
+          <span>{{ reason().length }}/{{ maxReasonLength }}</span>
+        </div>
+        <div class="info">
+          <span class="material-symbols-rounded filled">info</span>
+          <p>El rechazo es definitivo. El empleado verá este motivo en su app de reembolsos.</p>
+        </div>
+      </section>
+    } @else {
+      <section class="timeline">
+        <h3>Historial</h3>
+        <ol>
+          @for (step of timeline(); track step.title) {
+            <li [attr.data-tone]="step.tone" [class.current]="step.current">
+              <span class="step-icon material-symbols-rounded filled">{{ step.icon }}</span>
+              <div>
+                <strong>{{ step.title }}</strong>
+                <p>{{ step.detail }}</p>
+                @if (step.when) {
+                  <small>{{ step.when }}</small>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+
+    @if (!isPending() && mode() === 'reject') {
+      <div class="info warning">
+        <span class="material-symbols-rounded filled">warning</span>
+        <p>Esta solicitud ya fue decidida mientras la revisabas. Su estado es definitivo.</p>
+      </div>
+    }
+  </div>
+
+  <footer class="drawer-footer">
+    @if (isPending()) {
+      @if (mode() === 'reject') {
+        <button type="button" class="btn-secondary" (click)="mode.set('detail')" [disabled]="submitting()">Volver</button>
+        <button type="button" class="btn-danger grow" (click)="submitReject()" [disabled]="submitting()">
+          <span class="material-symbols-rounded">send</span>
+          {{ submitting() ? 'Rechazando...' : 'Rechazar solicitud' }}
+        </button>
+      } @else {
+        <button type="button" class="btn-danger-outline" (click)="mode.set('reject')">
+          <span class="material-symbols-rounded">close</span>
+          Rechazar
+        </button>
+        <button type="button" class="btn-success grow" (click)="approve.emit()">
+          <span class="material-symbols-rounded">check</span>
+          Aprobar solicitud
+        </button>
+      }
+    } @else {
+      <p class="final-note">
+        <span class="material-symbols-rounded">lock</span>
+        Estado definitivo: esta solicitud ya no puede cambiar.
+      </p>
+    }
+  </footer>
+</aside>

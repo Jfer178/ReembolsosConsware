@@ -9,9 +9,17 @@
     </div>
 
     <nav class="nav">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <span class="nav-title">Gestión</span>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ paths: 'exact', queryParams: 'ignored', fragment: 'ignored', matrixParams: 'ignored' }">
         <span class="material-symbols-rounded">fact_check</span>
         <span class="label">Panel de aprobación</span>
+        @if (pendingCount() > 0) {
+          <span class="nav-count">{{ pendingCount() }}</span>
+        }
+      </a>
+      <a routerLink="/reportes" routerLinkActive="active">
+        <span class="material-symbols-rounded">bar_chart</span>
+        <span class="label">Reportes</span>
       </a>
     </nav>
 
