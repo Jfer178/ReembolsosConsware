@@ -2,7 +2,39 @@
 
 MVP de la prueba técnica Fullstack: API ASP.NET Core + SQL Server, app Flutter para empleados y panel Angular para el aprobador.
 
-> README en construcción: se completará con comandos verificados al terminar cada parte.
+## Descripción y alcance
+
+Un empleado registra un gasto y consulta su estado desde la app móvil. Los gastos de hasta $500.000 COP se aprueban automáticamente; los de mayor valor quedan pendientes y un aprobador los aprueba o rechaza (con motivo obligatorio) desde el panel web. Una única API centraliza las reglas y guarda todo en SQL Server.
+
+Las tres partes del enunciado están completas y probadas contra la base de datos real:
+
+| Parte | Estado |
+|---|---|
+| 1. API REST con ASP.NET Core y SQL Server | Completa |
+| 2. App Flutter para empleados | Completa (probada en emulador Android y en navegador) |
+| 3. Panel Angular para el aprobador | Completa |
+
+## Tecnologías
+
+- **Backend:** ASP.NET Core 10 (Web API con controllers), Entity Framework Core 10, SQL Server 2025.
+- **Móvil:** Flutter 3.44 / Dart 3.12, paquete `http`, estado con `setState`.
+- **Web:** Angular 22 (componentes standalone, signals, `HttpClient`), SCSS.
+- **Pruebas:** `curl` contra la API, `flutter test`, Vitest (`ng test`).
+
+## Requisitos previos
+
+- .NET SDK 10 y la herramienta `dotnet-ef` 10.x.
+- SQL Server accesible (local o remoto) con permiso para crear la base, o una base vacía creada previamente.
+- Flutter 3.44+ y, para Android, el SDK con un emulador (probado con Pixel 7 / Android 15).
+- Node.js 24+ y npm.
+
+## Demostración rápida
+
+1. Levantar la API (`dotnet run` en el backend) y dejarla encendida.
+2. Desde la app Flutter, registrar un gasto de $650.000: queda **Pendiente**.
+3. En el panel Angular (`http://localhost:4210`), rechazarlo escribiendo un motivo.
+4. En la app, deslizar para actualizar: aparece **Rechazada** con el motivo.
+5. Reiniciar la API y consultar de nuevo: los datos siguen en SQL Server.
 
 ## Estructura
 
@@ -97,7 +129,7 @@ Backend, ejecutadas con `curl` contra la API real y SQL Server (29/10/2026):
 
 - T01–T16 de la matriz de la guía: todas correctas, incluidos el límite exacto (500000 → Approved; 500000,01 y 500001 → Pending), las validaciones 400, los 404 y los 409 por estado final.
 - Extras: monto no numérico → 400; `?status=Foo` y `?status=1` → 400; fechas devueltas en UTC con `Z`.
-- CORS: el preflight desde `http://localhost:4200` es aceptado y otros orígenes no reciben cabeceras CORS.
+- CORS: el preflight desde los orígenes configurados (`http://localhost:4210` y `http://localhost:4300`) es aceptado y otros orígenes no reciben cabeceras CORS.
 - T20: los datos siguen disponibles tras reiniciar la API.
 
 App Flutter:
@@ -113,3 +145,64 @@ Panel Angular (contra la API real y SQL Server):
 - Aprobación con confirmación guardada en SQL Server.
 - Conflicto: una solicitud aprobada por fuera muestra el aviso de 409 y la tabla se recarga.
 - Con la API apagada aparece el error con "Reintentar", que recupera los datos al volver la API.
+
+## Decisiones técnicas
+
+- **SQL Server:** cumple el requisito de base SQL real, estaba disponible en el equipo y permite usar `DECIMAL(18,2)` para montos y migraciones de EF Core. El esquema se crea solo con migraciones (no hay scripts manuales en paralelo).
+- **Una sola API, dos clientes:** Flutter y Angular nunca acceden a la base; la API es la única fuente de verdad para crear y decidir solicitudes.
+- **Reglas en el servicio, no en el controller ni en las interfaces:** `ReimbursementService` contiene el límite de $500.000, las validaciones y las transiciones de estado. Los clientes validan solo para dar una mejor experiencia; la API vuelve a validar todo.
+- **Restricciones `CHECK` en la tabla:** monto positivo, estados válidos y motivo obligatorio al rechazar, como defensa adicional a las validaciones del servicio.
+- **Una sola tabla:** el enunciado permite identificar al empleado con un nombre fijo, así que no hay tabla de usuarios ni login. Las categorías son una lista controlada por la interfaz.
+- **Monolito pequeño:** un dominio y un flujo de decisión no justifican microservicios; la separación Controller / Service / DTOs / Data mantiene el código ordenado sin sobreingeniería.
+- **Errores uniformes:** todas las respuestas de error son `{"message": "..."}` en español, y los 500 no exponen detalles de SQL Server.
+- **Puertos 5080 y 4210:** los puertos por defecto (5000 y 4200) estaban ocupados por Docker en el equipo de desarrollo. Ambos son configurables (`launchSettings.json`, `angular.json`).
+
+## Fuera de alcance
+
+No se implementó porque el enunciado no lo pide y habría restado tiempo a lo obligatorio. Así se abordaría:
+
+- **Autenticación y roles:** login con JWT o un proveedor de identidad; el aprobador y el empleado saldrían del token en lugar de un nombre fijo.
+- **Comprobantes y fecha del gasto:** columnas nuevas y almacenamiento de archivos (por ejemplo, Blob Storage) con validación de tipo y tamaño.
+- **Concurrencia entre aprobadores:** hoy se evita decidir dos veces validando el estado (409); en producción se añadiría `rowversion` para control optimista.
+- **Notificaciones, auditoría y reportes:** registro de quién decidió cada solicitud y aviso al empleado.
+- **Pruebas automatizadas del backend y CI:** pruebas de integración de la API y un pipeline que ejecute las pruebas de los tres proyectos.
+
+## Uso de IA
+
+Utilicé **Claude Code** (asistente de programación de Anthropic) para acelerar la escritura de código, la ejecución de pruebas y el diagnóstico de problemas del entorno. Las decisiones de producto, diseño y criterio técnico fueron mías: trabajé por partes, revisé cada resultado antes de avanzar y, cuando una propuesta no cumplía lo que buscaba, la rechacé y exploré otra alternativa.
+
+### Qué hizo la IA
+
+- Generar la primera versión del código de las tres partes a partir de la guía técnica del proyecto (`docs/`).
+- Ejecutar la matriz de pruebas contra la API y probar la app en el emulador Android.
+- Diagnosticar problemas del entorno: puertos ocupados por Docker, codificación de caracteres en PowerShell y CORS.
+
+### Decisiones que tomé
+
+**Visual**
+
+- Rechacé el primer diseño de la app por ser genérico y pedí rehacerlo a partir de mockups propios de la app y del panel, con la identidad de Consware: logo, paleta azul marino, tipografía, tarjetas y estados.
+- Revisé el resultado pantalla por pantalla y pedí corregir detalles: textos cortados en las tarjetas, la ilustración superpuesta al avatar y una columna de la tabla que no cabía.
+- Comparé probar solo en el navegador con montar un emulador Android, y elegí el emulador para que la demostración reflejara una app móvil real, dejando Flutter web como respaldo.
+- Dejé fuera de los mockups los elementos sin funcionalidad real (notificaciones, perfil, comprobantes, comparación con el mes anterior) para no mostrar controles vacíos.
+
+**Lógica**
+
+- Definí la regla en el límite: $500.000 exactos se aprueban y $500.000,01 queda pendiente, y lo verifiqué con casos de prueba en ambos lados del umbral.
+- Mantuve las reglas en un servicio separado del controller, con validación doble: los clientes validan para dar una mejor experiencia y la API es la autoridad final.
+- Establecí que una solicitud aprobada o rechazada no puede volver a decidirse (409) y que el panel se recargue si otra persona ya la decidió.
+- Avancé por etapas (backend, Flutter, Angular) con commits que reflejan cada avance probado, como prioriza el enunciado.
+
+**Seguridad**
+
+- Sin credenciales en el repositorio: la conexión a SQL Server usa autenticación integrada de Windows.
+- Actualicé dependencias con vulnerabilidades conocidas (`Microsoft.OpenApi`, `System.Security.Cryptography.Pkcs`) en lugar de ignorar las advertencias de NuGet.
+- CORS restringido a orígenes explícitos y configurables, en lugar de permitir cualquier origen.
+- Los errores 500 no exponen detalles de SQL Server, y la API valida longitudes y formatos antes de guardar.
+- Restricciones `CHECK` en la base como defensa adicional a la validación del servicio.
+- HTTP sin cifrar permitido solo en el build de depuración de Android, y `TrustServerCertificate` documentado como exclusivo de desarrollo.
+
+### Verificación
+
+- Probé los endpoints, la persistencia en SQL Server y la integración de ambos clientes, incluido el flujo completo: registrar un gasto en la app, decidirlo en el panel y ver el resultado de vuelta en la app.
+- Puedo explicar y modificar el código y cada una de estas decisiones.
