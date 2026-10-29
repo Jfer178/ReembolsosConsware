@@ -8,7 +8,7 @@ MVP de la prueba técnica Fullstack: API ASP.NET Core + SQL Server, app Flutter 
 
 ```text
 backend/Consware.Reimbursements.Api/   API REST (ASP.NET Core 10, EF Core 10, SQL Server)
-mobile/                                App Flutter del empleado (pendiente)
+mobile/                                App Flutter del empleado
 web/                                   Panel Angular del aprobador (pendiente)
 docs/                                  Guía técnica de diseño
 ```
@@ -41,6 +41,28 @@ El archivo `Consware.Reimbursements.Api.http` contiene peticiones de ejemplo.
 
 Errores con formato `{"message": "..."}`.
 
+Los orígenes de navegador permitidos por CORS se configuran en `appsettings.json` (`Cors:AllowedOrigins`):
+`http://localhost:4200` (Angular) y `http://localhost:4300` (Flutter web).
+
+## App móvil (Flutter)
+
+Requisitos: Flutter 3.44+ y la API encendida. El empleado se identifica con el nombre fijo `Empleado Demo` (sin login, como permite el enunciado).
+
+Pantallas: inicio con resumen por estado, registrar gasto (monto, categoría, descripción) y mis solicitudes (búsqueda, filtros por estado, motivo de rechazo y detalle).
+
+```powershell
+cd mobile
+flutter pub get
+flutter run -d chrome --web-port 4300       # navegador (Flutter web)
+flutter run -d emulator-5554                # emulador Android
+```
+
+La URL de la API se elige sola en `lib/config/api_config.dart`: `localhost:5080` en web y `10.0.2.2:5080` en el emulador Android.
+Para un celular físico: `flutter run --dart-define=API_BASE_URL=http://<IP-del-PC>:5080/api/reimbursements`
+(y levantar la API con `dotnet run --urls http://0.0.0.0:5080`).
+
+Pruebas: `flutter analyze` y `flutter test` (formatos, mapeo JSON, errores de la API, API apagada y listado con motivo de rechazo).
+
 ## Regla de negocio
 
 - Monto ≤ $500.000 COP → `Approved` automáticamente.
@@ -55,3 +77,8 @@ Backend, ejecutadas con `curl` contra la API real y SQL Server (29/10/2026):
 - Extras: monto no numérico → 400; `?status=Foo` y `?status=1` → 400; fechas devueltas en UTC con `Z`.
 - CORS: el preflight desde `http://localhost:4200` es aceptado y otros orígenes no reciben cabeceras CORS.
 - T20: los datos siguen disponibles tras reiniciar la API.
+
+App Flutter:
+
+- `flutter analyze` sin problemas y `flutter test` con 8 de 8 pruebas correctas.
+- Flutter web (release, puerto 4300) cargando las solicitudes reales de la API; el preflight CORS para POST desde `localhost:4300` es aceptado.
