@@ -1,0 +1,331 @@
+<div class="page">
+  <header class="topbar">
+    <label class="search">
+      <span class="material-symbols-rounded">search</span>
+      <input
+        type="search"
+        placeholder="Buscar por empleado, categoría o número de solicitud..."
+        aria-label="Buscar solicitudes"
+        [value]="search()"
+        (input)="onSearch($event)"
+      />
+    </label>
+
+    <div class="user">
+      <span class="user-avatar">AP</span>
+      <div class="user-text">
+        <strong>Aprobador</strong>
+        <span>Equipo de finanzas</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-text">
+      <h1>Panel de aprobación</h1>
+      <p>Revisa y gestiona las solicitudes de reembolso de tu equipo.</p>
+    </div>
+
+    <svg class="mountains" viewBox="0 0 300 230" aria-hidden="true">
+      <defs>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.3" stop-color="#cbddf6" />
+          <stop offset="1" stop-color="#cbddf6" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="main" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.2" stop-color="#7fa8e6" />
+          <stop offset="0.95" stop-color="#a6c4f0" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.25" stop-color="#5f8fdb" />
+          <stop offset="0.85" stop-color="#5f8fdb" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.25" stop-color="#ffffff" />
+          <stop offset="0.7" stop-color="#ffffff" stop-opacity="0" />
+        </linearGradient>
+        <filter id="blur" x="-50%" y="-100%" width="200%" height="300%"><feGaussianBlur stdDeviation="8" /></filter>
+      </defs>
+      <ellipse cx="126" cy="41" rx="42" ry="9" fill="#fff" opacity="0.9" filter="url(#blur)" />
+      <ellipse cx="258" cy="28" rx="45" ry="9" fill="#fff" opacity="0.9" filter="url(#blur)" />
+      <polygon fill="url(#far)" points="60,230 120,138 150,152 180,120 210,133 252,101 300,120 300,230" />
+      <polygon fill="url(#main)" points="96,230 144,147 165,127 180,106 198,69 210,55 222,71 237,83 258,110 279,124 300,138 300,230" />
+      <polygon fill="url(#shade)" points="210,55 222,71 237,83 258,110 246,161 222,133" />
+      <polygon fill="url(#snow)" points="210,55 198,69 180,106 174,133 189,108 195,143 207,97 216,115" />
+      <ellipse cx="165" cy="189" rx="90" ry="20" fill="#fff" opacity="0.9" filter="url(#blur)" />
+      <ellipse cx="285" cy="170" rx="60" ry="18" fill="#fff" opacity="0.9" filter="url(#blur)" />
+    </svg>
+
+    <p class="tagline">Decisiones de hoy,<br />equipos más fuertes mañana.</p>
+  </section>
+
+  <section class="stats">
+    <article class="stat" data-kind="pending">
+      <span class="stat-icon material-symbols-rounded">schedule</span>
+      <div>
+        <h3>Pendientes</h3>
+        <strong>{{ counts().Pending }}</strong>
+        <small>Por revisar</small>
+      </div>
+    </article>
+    <article class="stat" data-kind="approved">
+      <span class="stat-icon material-symbols-rounded">check</span>
+      <div>
+        <h3>Aprobadas</h3>
+        <strong>{{ counts().Approved }}</strong>
+        <small>En total</small>
+      </div>
+    </article>
+    <article class="stat" data-kind="rejected">
+      <span class="stat-icon material-symbols-rounded">close</span>
+      <div>
+        <h3>Rechazadas</h3>
+        <strong>{{ counts().Rejected }}</strong>
+        <small>En total</small>
+      </div>
+    </article>
+    <article class="stat" data-kind="amount">
+      <span class="stat-icon material-symbols-rounded filled">savings</span>
+      <div>
+        <h3>Monto total aprobado</h3>
+        <strong>{{ formatCopNumber(approvedTotal()) }} <span class="currency">COP</span></strong>
+        <small>Solicitudes aprobadas</small>
+      </div>
+    </article>
+  </section>
+
+  <section class="board">
+    <div class="board-toolbar">
+      <div class="tabs" role="tablist" aria-label="Filtrar por estado">
+        @for (t of tabs; track t.value) {
+          <button
+            type="button"
+            role="tab"
+            [class.active]="tab() === t.value"
+            [attr.aria-selected]="tab() === t.value"
+            (click)="selectTab(t.value)"
+          >
+            {{ t.label }} <span class="count">{{ counts()[t.value] }}</span>
+          </button>
+        }
+      </div>
+
+      <button type="button" class="refresh" (click)="load()" [disabled]="loading()">
+        <span class="material-symbols-rounded" [class.spin]="loading()">refresh</span>
+        Actualizar
+      </button>
+    </div>
+
+    @if (error(); as message) {
+      <div class="error-state">
+        <span class="material-symbols-rounded">cloud_off</span>
+        <h3>No se pudo cargar la información</h3>
+        <p>{{ message }}</p>
+        <button type="button" class="btn-primary" (click)="load()">
+          <span class="material-symbols-rounded">refresh</span>
+          Reintentar
+        </button>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th># Solicitud</th>
+              <th>Empleado</th>
+              <th>Categoría</th>
+              <th>Monto</th>
+              <th>Fecha de creación</th>
+              <th>Estado</th>
+              <th class="actions-col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (loading() && rows().length === 0) {
+              @for (row of skeletonRows; track row) {
+                <tr class="skeleton"><td colspan="7"><div></div></td></tr>
+              }
+            } @else {
+              @for (item of visibleRows(); track item.id) {
+                <tr>
+                  <td class="code">{{ code(item) }}</td>
+                  <td>
+                    <div class="employee">
+                      <span class="avatar" [style.background]="avatarColor(item.employeeName)">
+                        {{ initials(item.employeeName) }}
+                      </span>
+                      <div>
+                        <strong>{{ item.employeeName }}</strong>
+                        <small [title]="item.description">{{ item.description }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="category">
+                      <span class="material-symbols-rounded">{{ categoryIcon(item.category) }}</span>
+                      {{ item.category }}
+                    </span>
+                  </td>
+                  <td>
+                    <strong class="amount">{{ formatCop(item.amount) }}</strong>
+                    @if (item.status === 'Pending' && item.amount > limit) {
+                      <span class="manual" title="Supera el límite de aprobación automática">
+                        <span class="material-symbols-rounded filled">warning</span>
+                        Revisión manual (&gt; $500.000)
+                      </span>
+                    }
+                  </td>
+                  <td class="date">{{ formatDate(item.createdAtUtc) }}</td>
+                  <td>
+                    <span class="badge" [attr.data-status]="item.status">
+                      <span class="material-symbols-rounded filled">{{ labels[item.status].icon }}</span>
+                      {{ labels[item.status].singular }}
+                    </span>
+                    @if (item.rejectionReason) {
+                      <small class="reason" [title]="item.rejectionReason">{{ item.rejectionReason }}</small>
+                    }
+                  </td>
+                  <td class="actions">
+                    @if (item.status === 'Pending') {
+                      <button type="button" class="btn-approve" (click)="approving.set(item)">
+                        <span class="material-symbols-rounded">check</span>
+                        Aprobar
+                      </button>
+                      <button type="button" class="btn-reject" (click)="openReject(item)">
+                        <span class="material-symbols-rounded">close</span>
+                        Rechazar
+                      </button>
+                    } @else if (item.decidedAtUtc) {
+                      <span class="decided">Decidida el {{ formatDate(item.decidedAtUtc) }}</span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7">
+                    <div class="empty">
+                      <span class="material-symbols-rounded">task_alt</span>
+                      <strong>{{ emptyState().title }}</strong>
+                      <span>{{ emptyState().text }}</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>
+
+@if (approving(); as item) {
+  <div class="backdrop" (click)="closeDialogs()"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="approve-title">
+    <span class="modal-icon material-symbols-rounded filled">check_circle</span>
+    <h2 id="approve-title">¿Aprobar esta solicitud?</h2>
+    <p>
+      {{ code(item) }} · {{ item.employeeName }}<br />
+      <strong>{{ formatCop(item.amount) }}</strong> · {{ item.category }}
+    </p>
+    <p class="hint">Una vez aprobada, su estado ya no podrá cambiar.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" (click)="closeDialogs()" [disabled]="submitting()">Cancelar</button>
+      <button type="button" class="btn-success" (click)="confirmApprove()" [disabled]="submitting()">
+        <span class="material-symbols-rounded">check</span>
+        {{ submitting() ? 'Aprobando...' : 'Aprobar solicitud' }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (rejecting(); as item) {
+  <div class="backdrop" (click)="closeDialogs()"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+    <header class="drawer-header">
+      <span class="drawer-icon material-symbols-rounded">close</span>
+      <h2 id="reject-title">Rechazar solicitud</h2>
+      <button type="button" class="icon-btn" (click)="closeDialogs()" aria-label="Cerrar">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </header>
+
+    <div class="drawer-body">
+      <div class="request-card">
+        <div class="request-head">
+          <span class="avatar" [style.background]="avatarColor(item.employeeName)">{{ initials(item.employeeName) }}</span>
+          <div>
+            <strong>{{ item.employeeName }}</strong>
+            <small>Empleado</small>
+          </div>
+          <span class="request-code">{{ code(item) }}</span>
+        </div>
+        <dl>
+          <div>
+            <dt>Categoría</dt>
+            <dd>
+              <span class="material-symbols-rounded">{{ categoryIcon(item.category) }}</span>
+              {{ item.category }}
+            </dd>
+          </div>
+          <div>
+            <dt>Monto</dt>
+            <dd>{{ formatCop(item.amount) }}</dd>
+          </div>
+          <div>
+            <dt>Fecha de creación</dt>
+            <dd>{{ formatDate(item.createdAtUtc) }}</dd>
+          </div>
+          <div>
+            <dt>Descripción</dt>
+            <dd>{{ item.description }}</dd>
+          </div>
+        </dl>
+        @if (item.amount > limit) {
+          <span class="manual pill">
+            <span class="material-symbols-rounded filled">error</span>
+            Requiere revisión manual (&gt; $500.000)
+          </span>
+        }
+      </div>
+
+      <label class="field-label" for="reason">Motivo del rechazo <span class="required">*</span></label>
+      <textarea
+        id="reason"
+        rows="5"
+        placeholder="Indica el motivo del rechazo..."
+        [attr.maxlength]="maxReasonLength"
+        [value]="reason()"
+        [class.invalid]="reasonError()"
+        [disabled]="submitting()"
+        (input)="onReasonInput($event)"
+      ></textarea>
+      <div class="field-meta">
+        <span class="field-error">{{ reasonError() }}</span>
+        <span>{{ reason().length }}/{{ maxReasonLength }}</span>
+      </div>
+
+      <div class="info">
+        <span class="material-symbols-rounded filled">info</span>
+        <p>El rechazo es definitivo. El empleado verá este motivo en su app de reembolsos.</p>
+      </div>
+    </div>
+
+    <footer class="drawer-footer">
+      <button type="button" class="btn-secondary" (click)="closeDialogs()" [disabled]="submitting()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="confirmReject()" [disabled]="submitting()">
+        <span class="material-symbols-rounded">send</span>
+        {{ submitting() ? 'Rechazando...' : 'Rechazar solicitud' }}
+      </button>
+    </footer>
+  </aside>
+}
+
+@if (toast(); as t) {
+  <div class="toast" [attr.data-kind]="t.kind" role="status" aria-live="polite">
+    <span class="material-symbols-rounded filled">
+      {{ t.kind === 'success' ? 'check_circle' : t.kind === 'warning' ? 'warning' : 'error' }}
+    </span>
+    {{ t.text }}
+  </div>
+}

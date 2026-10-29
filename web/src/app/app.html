@@ -1,0 +1,32 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <app-logo-mark [size]="30" color="#ffffff" />
+      <div class="brand-text">
+        <strong>Consware</strong>
+        <span>Reembolsos</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <span class="material-symbols-rounded">fact_check</span>
+        <span class="label">Panel de aprobación</span>
+      </a>
+    </nav>
+
+    <div class="promo">
+      <span class="promo-icon material-symbols-rounded">bolt</span>
+      <p>Gestión de gastos más simple, transparente y eficiente.</p>
+    </div>
+
+    <svg class="waves" viewBox="0 0 280 260" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 120 C 70 60, 140 200, 280 110 L280 260 L0 260 Z" fill="rgba(59,139,255,0.18)" />
+      <path d="M0 170 C 90 110, 170 240, 280 160 L280 260 L0 260 Z" fill="rgba(59,139,255,0.22)" />
+    </svg>
+  </aside>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

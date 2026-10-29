@@ -9,7 +9,7 @@ MVP de la prueba técnica Fullstack: API ASP.NET Core + SQL Server, app Flutter 
 ```text
 backend/Consware.Reimbursements.Api/   API REST (ASP.NET Core 10, EF Core 10, SQL Server)
 mobile/                                App Flutter del empleado
-web/                                   Panel Angular del aprobador (pendiente)
+web/                                   Panel Angular del aprobador
 docs/                                  Guía técnica de diseño
 ```
 
@@ -42,7 +42,8 @@ El archivo `Consware.Reimbursements.Api.http` contiene peticiones de ejemplo.
 Errores con formato `{"message": "..."}`.
 
 Los orígenes de navegador permitidos por CORS se configuran en `appsettings.json` (`Cors:AllowedOrigins`):
-`http://localhost:4200` (Angular) y `http://localhost:4300` (Flutter web).
+`http://localhost:4210` (Angular) y `http://localhost:4300` (Flutter web).
+Se usa 4210 en lugar del 4200 por defecto porque ese puerto también lo ocupaba Docker en el equipo de desarrollo.
 
 ## App móvil (Flutter)
 
@@ -64,6 +65,26 @@ Para un celular físico: `flutter run --dart-define=API_BASE_URL=http://<IP-del-
 
 Pruebas: `flutter analyze` y `flutter test` (formatos, mapeo JSON, errores de la API, API apagada y listado con motivo de rechazo).
 
+## Panel del aprobador (Angular)
+
+Requisitos: Node 24+ y la API encendida. Angular 22 con componentes standalone y signals; íconos (Material Symbols) y fuente (Poppins) instalados como paquetes, sin depender de internet.
+
+```powershell
+cd web
+npm install
+npm start        # http://localhost:4210
+```
+
+Funcionalidad:
+
+- Resumen con pendientes, aprobadas, rechazadas y monto total aprobado.
+- Tabla filtrada por estado con `GET /api/reimbursements?status=...` (Pendientes por defecto), búsqueda por empleado, categoría, descripción o código.
+- Aprobar: pide confirmación y llama a `PATCH /{id}/approve`.
+- Rechazar: panel lateral con motivo obligatorio (máx. 500 caracteres); la UI bloquea el motivo vacío y la API también lo valida.
+- Si otra persona ya decidió la solicitud (409), se informa y la tabla se recarga. Si la API está apagada, se muestra el error con "Reintentar".
+
+La URL de la API está en `src/app/api.config.ts`. Pruebas: `npx ng test --watch=false`.
+
 ## Regla de negocio
 
 - Monto ≤ $500.000 COP → `Approved` automáticamente.
@@ -84,3 +105,11 @@ App Flutter:
 - `flutter analyze` sin problemas y `flutter test` con 8 de 8 pruebas correctas.
 - Flutter web (release, puerto 4300) cargando las solicitudes reales de la API; el preflight CORS para POST desde `localhost:4300` es aceptado.
 - Emulador Android (Pixel 7, Android 15) contra la API en `10.0.2.2:5080`: se registró desde el formulario un gasto de $650.000 (Tiquetes), quedó `Pending` en SQL Server y la lista se actualizó con el aviso de aprobación manual.
+
+Panel Angular (contra la API real y SQL Server):
+
+- `ng build` sin advertencias y `ng test` con 6 de 6 pruebas correctas (servicio HTTP, formato y mensajes de error).
+- Rechazo sin motivo bloqueado en la UI (T19); rechazo con motivo guardado en SQL Server con su fecha.
+- Aprobación con confirmación guardada en SQL Server.
+- Conflicto: una solicitud aprobada por fuera muestra el aviso de 409 y la tabla se recarga.
+- Con la API apagada aparece el error con "Reintentar", que recupera los datos al volver la API.
