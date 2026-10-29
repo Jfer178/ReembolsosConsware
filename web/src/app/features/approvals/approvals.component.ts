@@ -22,6 +22,7 @@ import {
   requestCode,
   timeAgo,
 } from '../../shared/format';
+import { AnimatedNumber } from '../../shared/animated-number';
 import { Topbar } from '../../shared/topbar';
 import { RequestDetail } from './request-detail';
 
@@ -36,7 +37,7 @@ interface Toast {
 
 @Component({
   selector: 'app-approvals',
-  imports: [Topbar, RequestDetail],
+  imports: [Topbar, RequestDetail, AnimatedNumber],
   templateUrl: './approvals.component.html',
   styleUrl: './approvals.component.scss',
   host: { '(document:keydown.escape)': 'onEscape()' },

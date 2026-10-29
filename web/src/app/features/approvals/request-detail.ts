@@ -104,10 +104,11 @@ export class RequestDetail {
       });
     } else {
       const approved = item.status === 'Approved';
+      const by = item.decidedBy ?? 'el Equipo de Finanzas';
       steps.push({
         icon: approved ? 'check_circle' : 'cancel',
         tone: approved ? 'approved' : 'rejected',
-        title: approved ? 'Aprobada por el Equipo de Finanzas' : 'Rechazada por el Equipo de Finanzas',
+        title: approved ? `Aprobada por ${by}` : `Rechazada por ${by}`,
         detail: approved
           ? `Tiempo de respuesta: ${elapsed(item.decidedAtUtc)}.`
           : `Motivo: ${item.rejectionReason}`,

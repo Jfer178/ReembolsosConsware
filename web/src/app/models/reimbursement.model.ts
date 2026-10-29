@@ -10,6 +10,8 @@ export interface Reimbursement {
   rejectionReason: string | null;
   createdAtUtc: string;
   decidedAtUtc: string | null;
+  /** Nombre del aprobador o "Sistema" en la aprobación automática. */
+  decidedBy: string | null;
 }
 
 /** Misma política que el backend; en la UI solo se usa para mostrar avisos. */

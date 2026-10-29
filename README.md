@@ -36,6 +36,21 @@ Las tres partes del enunciado están completas y probadas contra la base de dato
 4. En la app, deslizar para actualizar: aparece **Rechazada** con el motivo.
 5. Reiniciar la API y consultar de nuevo: los datos siguen en SQL Server.
 
+## Usuarios de prueba y seguridad
+
+La API exige iniciar sesión (JWT). En Development se crean estos usuarios al arrancar:
+
+| Usuario | Contraseña | Rol | Dónde entra |
+|---|---|---|---|
+| `empleado.demo` | `Empleado2026!` | Empleado | App Flutter |
+| `otra.persona` | `Empleado2026!` | Empleado | App Flutter |
+| `andres.ramirez` | `Finanzas2026!` | Aprobador (Equipo de Finanzas) | Panel Angular |
+
+- Contraseñas guardadas con hash BCrypt; login con mensaje genérico (no revela si el usuario existe) y máximo 5 intentos por minuto por IP (429).
+- El empleado se toma del token: solo crea y ve sus solicitudes; solo el rol Aprobador puede aprobar o rechazar (403 en otro caso). Cada decisión guarda quién la tomó (`decidedBy`; "Sistema" en la aprobación automática).
+- La clave de firma no está en el repositorio. En desarrollo se configura con `dotnet user-secrets set "Jwt:Key" "<clave-larga-aleatoria>"` dentro de `backend/Consware.Reimbursements.Api` (o la variable de entorno `Jwt__Key`). Si falta, la API usa una clave temporal y las sesiones se cierran al reiniciarla.
+- La app guarda la sesión cifrada (flutter_secure_storage); el panel usa `sessionStorage` y cierra sesión al vencer el token o ante un 401.
+
 ## Estructura
 
 ```text
@@ -140,6 +155,9 @@ App Flutter:
 - Flutter web (release, puerto 4300) cargando las solicitudes reales de la API; el preflight CORS para POST desde `localhost:4300` es aceptado.
 - Emulador Android (Pixel 7, Android 15) contra la API en `10.0.2.2:5080`: se registró desde el formulario un gasto de $650.000 (Tiquetes), quedó `Pending` en SQL Server y la lista se actualizó con el aviso de aprobación manual.
 
+Autenticación (contra la API real): 18 de 18 pruebas de seguridad — sin token o token alterado → 401; mismo mensaje para usuario inexistente y contraseña incorrecta; el empleado no puede suplantar a otro, ver solicitudes ajenas ni aprobar (403); decisiones auditadas; sexto intento de login seguido → 429. La matriz T01–T16 se repitió con sesión: 18 de 18.
+En el emulador Android: login, error de credenciales, validación de campos, creación con animación de éxito y cierre de sesión. En el panel: redirección al login sin sesión, empleado rechazado, aprobador dentro y cierre de sesión.
+
 Panel Angular (contra la API real y SQL Server):
 
 - `ng build` sin advertencias y `ng test` con 7 de 7 pruebas correctas (servicio HTTP, formatos, tiempos relativos y mensajes de error).
@@ -166,7 +184,7 @@ Panel Angular (contra la API real y SQL Server):
 
 No se implementó porque el enunciado no lo pide y habría restado tiempo a lo obligatorio. Así se abordaría:
 
-- **Autenticación y roles:** login con JWT o un proveedor de identidad; el aprobador y el empleado saldrían del token en lugar de un nombre fijo.
+- **Proveedor de identidad corporativo:** el login actual (JWT propio) se reemplazaría por Azure AD / Entra ID u otro proveedor OpenID Connect, con refresh tokens.
 - **Comprobantes y fecha del gasto:** columnas nuevas y almacenamiento de archivos (por ejemplo, Blob Storage) con validación de tipo y tamaño.
 - **Concurrencia entre aprobadores:** hoy se evita decidir dos veces validando el estado (409); en producción se añadiría `rowversion` para control optimista.
 - **Tiempo real con push:** el panel consulta la API cada 10 s, suficiente para este volumen; con más aprobadores se usaría SignalR para enviar los cambios desde el servidor.

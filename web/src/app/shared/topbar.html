@@ -47,15 +47,43 @@
       }
     </div>
 
-    <div class="team">
-      <span class="team-avatar">
-        <span class="material-symbols-rounded filled">groups</span>
-        <span class="online" aria-hidden="true"></span>
-      </span>
-      <div class="team-text">
-        <strong>Equipo de Finanzas</strong>
-        <span>Aprobador · Consware</span>
-      </div>
+    <div class="team-wrap">
+      <button
+        type="button"
+        class="team"
+        aria-label="Mi cuenta"
+        [attr.aria-expanded]="accountOpen()"
+        (click)="accountOpen.set(!accountOpen())"
+      >
+        <span class="team-avatar">
+          {{ initials() }}
+          <span class="online" aria-hidden="true"></span>
+        </span>
+        <span class="team-text">
+          <strong>{{ user()?.fullName }}</strong>
+          <span>{{ user()?.department }} · Aprobador</span>
+        </span>
+        <span class="material-symbols-rounded chevron">keyboard_arrow_down</span>
+      </button>
+
+      @if (accountOpen()) {
+        <div class="click-catcher" (click)="accountOpen.set(false)"></div>
+        <div class="menu account" role="menu">
+          <div class="account-head">
+            <span class="team-avatar large">{{ initials() }}</span>
+            <strong>{{ user()?.fullName }}</strong>
+            <span>{{ user()?.username }} · {{ user()?.department }}</span>
+          </div>
+          <div class="account-info">
+            <span class="material-symbols-rounded filled">verified_user</span>
+            <span>Sesión segura activa hasta las {{ expiresLabel() }}</span>
+          </div>
+          <button type="button" class="menu-item logout" role="menuitem" (click)="logout()">
+            <span class="material-symbols-rounded">logout</span>
+            Cerrar sesión
+          </button>
+        </div>
+      }
     </div>
   </div>
 </header>

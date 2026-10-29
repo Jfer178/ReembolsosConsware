@@ -31,24 +31,42 @@ export class ReimbursementStore {
   /** Última tanda de llegadas, para mostrar un aviso. */
   readonly arrivals = signal<{ items: Reimbursement[]; at: number } | null>(null);
 
-  constructor() {
-    this.refresh();
+  private poll?: ReturnType<typeof setInterval>;
+  private clock?: ReturnType<typeof setInterval>;
+  private readonly onVisible = () => {
+    if (document.visibilityState === 'visible') this.refresh();
+  };
 
-    const poll = setInterval(() => {
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stop());
+  }
+
+  /** Empieza a sincronizar (al entrar al panel con sesión). Llamarlo varias veces no duplica nada. */
+  start(): void {
+    if (this.poll) return;
+    this.refresh(true);
+    this.poll = setInterval(() => {
       if (document.visibilityState === 'visible') this.refresh();
     }, ReimbursementStore.refreshIntervalMs);
-    const clock = setInterval(() => this.now.set(Date.now()), 1000);
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') this.refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
+    this.clock = setInterval(() => this.now.set(Date.now()), 1000);
+    document.addEventListener('visibilitychange', this.onVisible);
+  }
 
-    inject(DestroyRef).onDestroy(() => {
-      clearInterval(poll);
-      clearInterval(clock);
-      document.removeEventListener('visibilitychange', onVisible);
-      this.inFlight?.unsubscribe();
-    });
+  /** Detiene la sincronización y borra los datos (al cerrar sesión). */
+  stop(): void {
+    clearInterval(this.poll);
+    clearInterval(this.clock);
+    this.poll = this.clock = undefined;
+    document.removeEventListener('visibilitychange', this.onVisible);
+    this.inFlight?.unsubscribe();
+    this.inFlight = undefined;
+    this.knownIds = null;
+    this.items.set([]);
+    this.loading.set(true);
+    this.error.set(null);
+    this.lastUpdated.set(null);
+    this.markAllSeen();
+    this.arrivals.set(null);
   }
 
   /** `force` descarta una consulta en curso para reflejar de inmediato una decisión propia. */

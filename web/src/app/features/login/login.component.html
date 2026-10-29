@@ -1,0 +1,128 @@
+<div class="login">
+  <section class="brand-panel" aria-hidden="true">
+    <div class="brand">
+      <app-logo-mark [size]="34" color="#ffffff" />
+      <div>
+        <strong>Consware</strong>
+        <span>Reembolsos</span>
+      </div>
+    </div>
+
+    <div class="pitch">
+      <span class="pitch-chip">
+        <span class="material-symbols-rounded filled">groups</span>
+        Equipo de Finanzas
+      </span>
+      <h2>Decisiones de hoy,<br />equipos más fuertes mañana.</h2>
+      <ul>
+        <li><span class="material-symbols-rounded">bolt</span> Solicitudes en vivo, sin recargar la página</li>
+        <li><span class="material-symbols-rounded">history</span> Historial auditado de cada decisión</li>
+        <li><span class="material-symbols-rounded">bar_chart</span> Reportes con indicadores reales</li>
+      </ul>
+    </div>
+
+    <svg class="mountains" viewBox="0 0 600 260" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="lg-far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3b6fd0" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#3b6fd0" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient id="lg-main" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5b8ff0" stop-opacity="0.75" />
+          <stop offset="1" stop-color="#2050b8" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon fill="url(#lg-far)" points="0,260 90,150 160,190 250,110 330,170 420,95 520,160 600,120 600,260" />
+      <polygon fill="url(#lg-main)" points="60,260 200,140 260,175 340,70 400,120 470,150 600,200 600,260" />
+      <polygon fill="#ffffff" opacity="0.35" points="340,70 315,105 330,100 322,135 345,95 360,108" />
+    </svg>
+  </section>
+
+  <section class="form-panel">
+    <form class="card" (submit)="submit($event)" novalidate>
+      <div class="mobile-brand">
+        <app-logo-mark [size]="28" />
+        <strong>Consware</strong>
+      </div>
+
+      <h1>Iniciar sesión</h1>
+      <p class="subtitle">Panel de aprobación del Equipo de Finanzas</p>
+
+      @if (expiredNotice() && !error()) {
+        <div class="notice">
+          <span class="material-symbols-rounded filled">schedule</span>
+          Tu sesión expiró. Vuelve a iniciar sesión para continuar.
+        </div>
+      }
+
+      <label class="field" [class.invalid]="touched() && !username().trim()">
+        <span class="field-label">Usuario</span>
+        <span class="input">
+          <span class="material-symbols-rounded">person</span>
+          <input
+            name="username"
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="p. ej. andres.ramirez"
+            [value]="username()"
+            [disabled]="submitting()"
+            (input)="onInput('username', $event)"
+          />
+        </span>
+        @if (touched() && !username().trim()) {
+          <span class="field-error">Ingresa tu usuario.</span>
+        }
+      </label>
+
+      <label class="field" [class.invalid]="touched() && !password()">
+        <span class="field-label">Contraseña</span>
+        <span class="input">
+          <span class="material-symbols-rounded">lock</span>
+          <input
+            name="password"
+            autocomplete="current-password"
+            placeholder="••••••••"
+            [type]="showPassword() ? 'text' : 'password'"
+            [value]="password()"
+            [disabled]="submitting()"
+            (input)="onInput('password', $event)"
+          />
+          <button
+            type="button"
+            class="toggle"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            (click)="showPassword.set(!showPassword())"
+          >
+            <span class="material-symbols-rounded">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+          </button>
+        </span>
+        @if (touched() && !password()) {
+          <span class="field-error">Ingresa tu contraseña.</span>
+        }
+      </label>
+
+      @if (error(); as message) {
+        <div class="error" role="alert">
+          <span class="material-symbols-rounded filled">error</span>
+          {{ message }}
+        </div>
+      }
+
+      <button type="submit" class="btn-primary submit" [disabled]="submitting()">
+        @if (submitting()) {
+          <span class="spinner" aria-hidden="true"></span>
+          Ingresando...
+        } @else {
+          <span class="material-symbols-rounded">login</span>
+          Ingresar al panel
+        }
+      </button>
+
+      <p class="footnote">
+        <span class="material-symbols-rounded">shield_lock</span>
+        Acceso exclusivo para aprobadores. Los empleados registran sus gastos desde la app móvil.
+      </p>
+    </form>
+  </section>
+</div>

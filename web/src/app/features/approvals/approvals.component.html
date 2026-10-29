@@ -67,7 +67,7 @@
       <span class="stat-icon material-symbols-rounded">schedule</span>
       <div>
         <h3>Pendientes</h3>
-        <strong>{{ counts().Pending }}</strong>
+        <strong><app-animated-number [value]="counts().Pending" /></strong>
         <small>Por revisar</small>
       </div>
     </button>
@@ -75,7 +75,7 @@
       <span class="stat-icon material-symbols-rounded">check</span>
       <div>
         <h3>Aprobadas</h3>
-        <strong>{{ counts().Approved }}</strong>
+        <strong><app-animated-number [value]="counts().Approved" /></strong>
         <small>En total</small>
       </div>
     </button>
@@ -83,7 +83,7 @@
       <span class="stat-icon material-symbols-rounded">close</span>
       <div>
         <h3>Rechazadas</h3>
-        <strong>{{ counts().Rejected }}</strong>
+        <strong><app-animated-number [value]="counts().Rejected" /></strong>
         <small>En total</small>
       </div>
     </button>
@@ -91,7 +91,7 @@
       <span class="stat-icon material-symbols-rounded filled">savings</span>
       <div>
         <h3>Monto total aprobado</h3>
-        <strong>{{ formatCopNumber(approvedTotal()) }} <span class="currency">COP</span></strong>
+        <strong><app-animated-number [value]="approvedTotal()" [format]="formatCopNumber" /> <span class="currency">COP</span></strong>
         <small>Solicitudes aprobadas</small>
       </div>
     </div>

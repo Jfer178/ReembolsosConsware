@@ -176,14 +176,29 @@
   }
 }
 
+.team-wrap {
+  position: relative;
+}
+
 .team {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 18px 6px 6px;
+  padding: 6px 12px 6px 6px;
+  border: none;
   border-radius: 999px;
   background: #fff;
   box-shadow: var(--shadow);
+  text-align: left;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: 0 14px 30px rgba(26, 43, 109, 0.12);
+  }
+
+  .chevron {
+    color: var(--muted);
+  }
 }
 
 .team-avatar {
@@ -195,9 +210,69 @@
   border-radius: 50%;
   background: linear-gradient(135deg, #1a2b6d, #1668f2);
   color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+
+  &.large {
+    width: 64px;
+    height: 64px;
+    font-size: 20px;
+  }
+}
+
+.account {
+  width: 300px;
+  padding: 10px;
+}
+
+.account-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 10px 16px;
+  text-align: center;
+
+  .team-avatar {
+    margin-bottom: 10px;
+  }
+
+  strong {
+    color: var(--navy);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  span:last-child {
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12.5px;
 
   .material-symbols-rounded {
-    font-size: 24px;
+    color: var(--approved);
+    font-size: 20px;
+  }
+}
+
+.logout {
+  justify-content: center;
+  color: var(--rejected);
+  font-weight: 600;
+
+  &:hover {
+    background: var(--rejected-bg);
   }
 }
 
@@ -249,6 +324,10 @@
 
   .team {
     padding: 4px;
+
+    .chevron {
+      display: none;
+    }
   }
 
   .menu {
